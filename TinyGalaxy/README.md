@@ -3,6 +3,8 @@
 ## Tiny Galaxy
 
 自機を操って敵UFOを倒すゲーム
+BMUG会報 BASIC MASTER USER'S GROUP No.5 MAY 1982 に投稿したもの
+
 
 ### ファイル一覧
 
