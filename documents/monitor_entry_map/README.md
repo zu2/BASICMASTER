@@ -1,4 +1,4 @@
-# L2 BASIC Entry map
+# Monitor Entry map
 
 BASIC MASTER LEVEL 2 MAGAZINE（BMUG発行）の1984年JAN,FEB号に投稿したもの。
 
