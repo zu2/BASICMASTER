@@ -19,3 +19,7 @@
 
 - 英数	加速
 - V・N	左右移動
+
+### 資料
+
+![Tiny Galaxy](./TinyGalaxy.BMUG198205.pdf "Tiny Galaxy")
