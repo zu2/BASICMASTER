@@ -1,5 +1,7 @@
 # BASICMASTER
 
+Softwares for Hitach BASIC MASTER.
+
 ## LIFE2
 
 - LIFE GAMEの亜種。雑誌か何かで読んだものだと思うが覚えていない
