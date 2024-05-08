@@ -1,6 +1,6 @@
 # BASICMASTER
 
-Softwares for Hitach BASIC MASTER.
+Softwares for Hitach BASIC MASTER L2/L2II/Jr.
 
 ## LIFE2
 
