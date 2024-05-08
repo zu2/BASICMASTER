@@ -13,6 +13,7 @@
 - galaxy.bin.cmt			機械語プログラム（エミュレーター用CMT形式）
 - TinyGalaxy.BMUG198205.pdf	太古の資料のスキャン
 - TinyGalaxy.info			f9dasm用info（解析したい方へ）
+- TinyGalaxy.asm			上記infoで逆アセンブルしたもの
 
 
 ### 遊び方
