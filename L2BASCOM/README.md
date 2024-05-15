@@ -10,6 +10,7 @@ GAMEでGAMEのコンパイラが書けるんだからBASICでもできるでし�
 
 - [COMP.S](COMP.S) コンパイラソースコード
 - [COMP.bas.cmt](COMP.bas.cmt) カセットセーブイメージ
+- [COMP.pdf](COMP.pdf) BMUG 1982.Apr に掲載されたソース
 
 BMUG 1982.Apr とは差異があります。作った当時の話はブログに書きました。
 
