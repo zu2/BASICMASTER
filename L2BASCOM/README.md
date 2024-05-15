@@ -10,7 +10,9 @@ GAMEでGAMEのコンパイラが書けるんだからBASICでもできるでし�
 
 - [COMP.S](COMP.S) コンパイラソースコード
 
-BMUG 1982.Apr とは差異があります。
+BMUG 1982.Apr とは差異があります。作った当時の話はブログに書きました。
+
+- [大昔に作ったBASICコンパイラの話(1982年) | ず＠沖縄](https://www.zukeran.org/shin/d/2018/01/04/basic-compiler-1982/)
 
 ## 当時のマニュアルを人間OCRしたもの
 
