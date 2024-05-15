@@ -9,6 +9,7 @@ L2 BASICで書いたL2 BASICのコンパイラ。コードはK-code(kumajiriの�
 GAMEでGAMEのコンパイラが書けるんだからBASICでもできるでしょ、でも機械語に落とすのは難儀なのでK codeでお茶を濁しました。
 
 - [COMP.S](COMP.S) コンパイラソースコード
+- [COMP.bas.cmt](COMP.bas.cmt) カセットセーブイメージ
 
 BMUG 1982.Apr とは差異があります。作った当時の話はブログに書きました。
 
