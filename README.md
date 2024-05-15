@@ -5,7 +5,7 @@ Softwares and Documents for Hitach BASIC MASTER L2/L2II/Jr.
 ## LIFE2
 
 - LIFE GAMEの亜種。雑誌か何かで読んだものだと思うが覚えていない
-- 詳細は [LIFE2/README.md](LIFE2/README.md) 参照
+- 詳細は [life2/README.md](life2/README.md) 参照
 
 ## Tiny Galaxy
 
