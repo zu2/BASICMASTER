@@ -19,15 +19,25 @@ TinyBASICもモニタサブルーチンを利用するので、前半は使え�
 この移植版ではL2 BASICの一時的な作業領域である$7A〜を使うようにしています。
 
 電大版TinyBASICは0ページの$82-$B5をA-Zの変数領域として使っています。$82はA($41)を2倍した値です。
-さすがにこれだけの領域を使うのはもったいないので、この移植版では別ページにしています。が、今みたらバグってる気がする。TSTVはold MC6800さんのように変更した方が良いと思う。
+さすがにこれだけの領域を使うのはもったいないので、この移植版では別ページにしています。この辺りの話は下記の記事に詳しい。
 
-- [DENDAI.srec](DENDAI.srec)
-- [DENDAI.cmt](DENDAI.cmt)
+- [HD6303で電大版TINY BASIC：8bitマイコンで遊ぶ：SSブログ](https://baraki.blog.ss-blog.jp/2018-11-08)
 
 ## DENDAI.diffの説明
 
 [MIKBUGプチ拡張 (Old MC6800)](https://oando.web.fc2.com/old_mc6800/f100_414.htm)に載っているTB2KD.ASMとの差分です。Bit誌との差分が理想的ですが再入力する元気はなかった。
 
 - [DENDAI.diff](DENDAI.diff)
+- [DENDAI.srec](DENDAI.srec)
+- [DENDAI.cmt](DENDAI.cmt)
 
+## 資料
+
+- [マイ・コンピュータをつかう](https://amzn.to/3yoproY)」（講談社ブルーバックス 1978年4月25日
+- [Bit誌1978年8月号](https://amzn.to/4bCmak8)(共立出版)
+- [MIKBUGプチ拡張 (Old MC6800)](https://oando.web.fc2.com/old_mc6800/f100_414.htm)
+- [SBC6303で電大版TinyBASICを動かす | KUNINET BLOG](https://kuninet.org/2018/06/13/sbc6303%E3%81%A7%E9%9B%BB%E5%A4%A7%E7%89%88tinybasic%E3%82%92%E5%8B%95%E3%81%8B%E3%81%99/)
+- [HD6303で電大版TINY BASIC：8bitマイコンで遊ぶ：SSブログ](https://baraki.blog.ss-blog.jp/2018-11-08)
+- [Nakamozu Tiny Basic /ASCII](https://hyamasynth.web.fc2.com/ACII_NTB/ACII_NTB.html)
+- [Bequest333のページ 電大版TINYBASIC for PIC　ミニマムお試し版2](https://www3.hp-ez.com/hp/bequest333/page29)
 
