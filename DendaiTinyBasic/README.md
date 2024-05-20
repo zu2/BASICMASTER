@@ -33,7 +33,7 @@ TinyBASICもモニタサブルーチンを利用するので、前半は使え�
 
 ## 資料
 
-- [マイ・コンピュータをつかう](https://amzn.to/3yoproY)」（講談社ブルーバックス 1978年4月25日
+- [マイ・コンピュータをつかう](https://amzn.to/3yoproY)」（講談社ブルーバックス 1978年4月25日)
 - [Bit誌1978年8月号](https://amzn.to/4bCmak8)(共立出版)
 - [MIKBUGプチ拡張 (Old MC6800)](https://oando.web.fc2.com/old_mc6800/f100_414.htm)
 - [SBC6303で電大版TinyBASICを動かす | KUNINET BLOG](https://kuninet.org/2018/06/13/sbc6303%E3%81%A7%E9%9B%BB%E5%A4%A7%E7%89%88tinybasic%E3%82%92%E5%8B%95%E3%81%8B%E3%81%99/)

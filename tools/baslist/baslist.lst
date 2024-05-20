@@ -1,0 +1,63 @@
+ 00D6                 LPTR    EQU             $00D6
+ 00D8                 LSAVE   EQU             $00D8
+ B000                 LTOP    EQU             $B000
+ DFFF                 LEND    EQU             $DFFF
+ EFD0                 BANKSEL EQU             $EFD0
+ F015                 CHROUT  EQU             $F015
+ FFE6                 NMISET  EQU             $FFE6
+ FFE9                 NMICLR  EQU             $FFE9
+                      *
+                                      ORG             $e000
+ E000 7EE01E                          JMP             INIT
+                                      ORG             $e01b
+ E01B 7EE042                          JMP             STORE1C
+                      *
+ E01E DFD8            INIT    STX             LSAVE
+ E020 CEB000                          LDX             #LTOP
+ E023 DFD6                            STX             LPTR
+ E025 37                              PSHB
+ E026 36                              PSHA
+ E027 0F                              SEI
+ E028 F6EFD0                          LDAB    BANKSEL
+ E02B 17                              TBA
+ E02C 8A01                            ORA             #1
+ E02E B7EFD0                          STAA    BANKSEL
+ E031 6F00            I01             CLR             0,X
+ E033 08                              INX
+ E034 8CE000                          CPX             #LEND+1
+ E037 26F8                            BNE             I01
+ E039 F7EFD0                          STAB    BANKSEL
+ E03C 0E                              CLI
+ E03D 32                              PULA
+ E03E 33                              PULB
+ E03F DED6                            LDX             LPTR
+ E041 39                              RTS
+ E042 DFD8            STORE1C STX             LSAVE
+ E044 DED6                            LDX             LPTR
+ E046 8CDFFF                          CPX             #LEND
+ E049 2717                            BEQ             STOREE
+ E04B 37                              PSHB
+ E04C 36                              PSHA
+ E04D F6EFD0                          LDAB    BANKSEL
+ E050 17                              TBA
+ E051 8A01                            ORAA    #1
+ E053 0F                              SEI
+ E054 B7EFD0                          STAA    BANKSEL
+ E057 32                              PULA
+ E058 A700                            STAA    0,X
+ E05A 08                              INX
+ E05B DFD6                            STX             LPTR
+ E05D F7EFD0                          STAB    BANKSEL
+ E060 0E                              CLI
+ E061 33                              PULB
+ E062 DED8            STOREE  LDX             LSAVE
+ E064 7EF015                          JMP             CHROUT
+                                      END
+
+SYMBOL TABLE
+   BANKSEL 00 EFD0    CHROUT 00 F015       I01 02 E031      INIT 02 E01E
+      LEND 00 DFFF      LPTR 00 00D6     LSAVE 00 00D8      LTOP 00 B000
+    NMICLR 00 FFE9    NMISET 00 FFE6   STORE1C 02 E042    STOREE 02 E062
+12 SYMBOLS
+
+0 error(s), 0 warning(s)
