@@ -8,10 +8,12 @@ NAKAMOZU Tiny BASIC port to BASIC MASTER L2.
 
 ## 追加機能
 
+```
 LOAD	FILENAME
 SAVE	FILENAME
 PLOT(X,Y,d)
 	X = 0-63, Y=0-47, d=0-1
+```
 
 ## BUG?
 
@@ -20,6 +22,7 @@ PICKUPでは ' ' を読み飛ばした後に ':' か 00 があれば、Z=1
 その他は Z=0 になる。IX は増えないので、無限ループになる。
 本来はエラーなので、Z=0 ならERR9か何かにすべき(本移植ではERR18）
 
+```
 Original Source
 Line	address
 0350	02D2		JSR	LET
@@ -27,4 +30,4 @@ Line	address
   :      :           :
 0356	02E0	RN5	JSR	PICKUP
 0357	02E3		BNE	RN5
-
+```
