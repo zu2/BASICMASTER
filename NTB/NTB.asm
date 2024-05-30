@@ -1735,9 +1735,7 @@ C2	STA B	0,X		    ; 　に変更
 	LDX	XS
 	RTS
 *
-ALLCLR	LDA B	#HEIGHT-1
-	CLR A
-	BRA C1
+ALLCLR	JSR	CLRTV
 *
 C3	CLR A			    ; 引数からADRS計算
 	ASL B
