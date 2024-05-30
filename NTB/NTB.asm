@@ -57,9 +57,6 @@ PIACRB	EQU	$E906		; H68 KEYSCAN用
 *
 	ORG	$74
 *
-BOP	RMB	2		; システム変数 '['
-EOP	RMB	2		; '\'
-MEMEND	RMB	2		; ']'
 WKA	RMB	2		; 一般WORK AREA
 WKB	RMB	2
 WKC	RMB	2
@@ -86,7 +83,10 @@ FSP	RMB	2		; FOR NEXT用〃
 DP	RMB	2		; READ,DATA POINTER
 isBREAK	RMB	1		; BREAK key pressed?
 	ORG	$0400
-VTOP	RMB	54		; 変数エリア 'A'〜'Z'
+VTOP	RMB	(26+1)*2	; 変数エリア dummy,'A'〜'Z'
+BOP	RMB	2		; システム変数 '['
+EOP	RMB	2		; '\'
+MEMEND	RMB	2		; ']'
 IXV	RMB	20		; IX変数エリア '%0'〜'%9'
 	ORG	$0500
 BFFR	RMB	256		; 入力バッファ
@@ -1112,7 +1112,7 @@ DIR	AND A	#$F		; IX変数 ADRS計算
 	ADD A	#IXV
 	ADC B	#IXV/256
 	RTS
-*				;IX配列
+*
 IND	PSH A			; ※配列&スタックPSH
 	JSR	CUL2		; 引数演算（再帰的）
 	PUL A			; ※
