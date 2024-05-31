@@ -36,11 +36,11 @@ GWIDTH	EQU	WIDTH*2
 GHEIGHT	EQU	HEIGHT*2
 *
 NEG	EQU	$3C06		; GRAPHIC SUB
-PICK	EQU	$3BF7
-SET	EQU	$3BD7
-RESET	EQU	$3BE8
-REVERS	EQU	$3BF0
-VRAMPR	EQU	$3CB6		; OPTION(画面プリントルーチン)
+;PICK	EQU	$3BF7
+;SET	EQU	$3BD7
+;RESET	EQU	$3BE8
+;REVERS	EQU	$3BF0
+;VRAMPR	EQU	$3CB6		; OPTION(画面プリントルーチン)
 *
 DISP	EQU	$A894		; I/OのDISPLAYポインタ
 *
@@ -1675,19 +1675,17 @@ GET	JSR	IN		    ; "GET$" 関数
 	CLR B
 GET1	JMP	CPS2
 *				    ;(OPTION) "COPY"ステートメント
-COPY	JSR	VRAMPR
-	BRA	G1
+;COPY	JSR	VRAMPR
+;	BRA	G1
 *
 * GRAPHIC			    ;［グラフィック命令］
 *
 NEGB	JSR	NEG		    ; "NEG"
-	BRA	G1
+	LDX	XS
+	RTS
 PICKB	BSR	SUB2		    ; "!P(X,Y)" 関数
 	BSR	SUB4
 	JSR	PICK
-	TBA
-	CLR B
-	LDX	XS
 GE1	JMP	CPS2
 *				    ;"!W(X,Y)"ステートメント
 SETPT	LDA A	0,X
@@ -1698,9 +1696,7 @@ SETPT	LDA A	0,X
 	PSH B
 	LDA A	#1
 	STA A	WKA
-G0	JSR	PLOT0
-G1	LDX	XS
-	RTS
+G0	JMP	PLOT0
 *				    ;"!B(X.Y)"ステートメント
 G2	CMP A	#'B'
 	BNE	G3
@@ -1713,6 +1709,8 @@ G2	CMP A	#'B'
 G3	CMP A	#'R'		    
  	BNE	ERR15
 	BSR	SUB3
+	PSH A
+	PSH B
 	TPA
 	STA A	WKA
 	BRA	G0
@@ -2012,8 +2010,8 @@ STATE	EQU	*-2
 	FDB	END
 	FCB	'S','T','O','P'+Z
 	FDB	STOP
-	FCB	'C','O','P','Y'+Z	; OPTIONとして各自が
-	FDB	COPY			; 　自分のステートメントに変更可
+;	FCB	'C','O','P','Y'+Z	; OPTIONとして各自が
+;	FDB	COPY			; 　自分のステートメントに変更可
 	FCB	'P','L','O','T'+Z
 	FDB	PLOT
 	FCB	$FF			; 一致するステートメントがなかったら
@@ -2089,40 +2087,15 @@ PLOT	JSR     SUB10
 	BSR	PLOT8		; 第3引数
 	STA A	WKA
 	JSR	CUL4
-PLOT0	STX	WKC		; SAVE IX
+PLOT0	STX	XS		; SAVE IX
 *
-	PUL B			; 第2引数 Y→ACCB
-	CLR	WKA+1
-	INC	WKA+1
-	LSR B			; Y dot位置
-	BCC	PLOT2
-	ASL	WKA+1
-	ASL	WKA+1
-*
-PLOT2	JSR	C3		; Y位置→アドレス
-	STA B	WKB+1
-	STA A	WKB
-*
-	PUL B			; 第1引数 X→AccB
-	LSR B			; X dot位置
-	BCC	PLOT1		;
-	ASL	WKA+1
-PLOT1	ADD B	WKB+1		; AccAB←PLOTアドレス
-	ADC A	#0	    
-	STA B	WKB+1		; WKB←
-	STA A	WKB
-	LDX	WKB
-	LDA B	0,X		; PLOT位置のキャラクタLOAD
+	PUL B			; 第2引数 Y→AccB
+	PUL A			; 第1引数 X→AccA
+	BSR	PADRS
 	CMP B	#$0F
 	BCS	PLOT3		; $10以上なら00扱い
 	CLR B
-PLOT3	CLR A
-	ADD B	#PLOTD0
-	ADC A	#PLOTD0/256
-	STA B	ADP+1
-	STA A	ADP
-	LDX	ADP
-	LDA B	0,X		; PLOT先のキャラクタのbitパターン
+PLOT3	BSR	PDOT		; PLOT先キャラクタのbit値計算
 	LDA A	WKA		; 0:off? >0:on <0:reverse?
 	BEQ	PLOTOFF
 	BPL	PLOT5
@@ -2132,7 +2105,7 @@ PLOTOFF	COM	WKA+1		; dot off
 	AND B	WKA+1
 	BRA	PLOT6
 PLOT5	ORAB	WKA+1		; dot on
-PLOT6	CLR A
+PLOT6	CLR A			; bit patternをdot値に戻す
 	ADD B	#PLOTD1
 	ADC A	#PLOTD1/256
 	STA B	ADP+1
@@ -2140,8 +2113,8 @@ PLOT6	CLR A
 	LDX	ADP
 	LDA B	0,X
 	LDX	WKB
-	STA B	0,X
-	LDX	WKC		; RESTORE IX
+	STA B	0,X		; PLOTする
+	LDX	XS		; RESTORE IX
 	RTS
 *
 PLOT8   JSR	COMMA
@@ -2152,6 +2125,56 @@ PLOT9	CLR A
 	CLR B
 	SEC
 	RTS
+*				; !P(X,Y): AccA:X, AccB:Y
+PICK	STX	XS
+	BSR	PADRS
+	CMP B	#$0F
+	BCC	PICK3		; $10以上なら100を返す
+	BSR	PDOT
+	AND B	WKA+1
+	BEQ	PICK4
+	LDA B	#1
+	BRA	PICK4
+PICK3	LDA B	#100
+PICK4	TBA
+	CLR B
+	LDX	XS
+	RTS
+*				; PLOT先のグラフィックCHR(AccB)をdotに値してAccBで返す
+PDOT	CLR A
+	ADD B	#PLOTD0
+	ADC A	#PLOTD0/256
+	STA B	ADP+1
+	STA A	ADP
+	LDX	ADP
+	LDA B	0,X		; PLOT先のキャラクタのbitパターン
+	RTS
+*				; AccA:X, AccB:Yからアドレスを得てXに入れる
+*				; A:破壊、BはPLOT位置のキャラクタ
+*				; WKAにX,Y位置のビットパターン(1,2,4,8)	; ちょっと冗長
+PADRS	CLR	WKA+1
+	INC	WKA+1
+	LSR B			; Y dot位置
+	BCC	PADRS1		; Yの偶奇により1か4にする
+	ASL	WKA+1
+	ASL	WKA+1
+PADRS1	PSH A			; X位置保存
+	JSR	C3		; Yからアドレス計算
+	STA B	WKB+1
+	STA A	WKB
+	PUL B			; 第1引数 X→AccB
+	LSR B			; X dot位置
+	BCC	PADRS2		; Xの偶奇により2倍する(1->2,2->4)
+	ASL	WKA+1
+PADRS2	ADD B	WKB+1		; AccAB←PLOTアドレス
+	ADC A	#0	    
+	STA B	WKB+1		; WKB←
+	STA A	WKB
+	LDX	WKB
+	LDA B	0,X		; PLOT位置のキャラクタLOAD
+	RTS
+*
+*   ベーシックマスターのグラフィックキャラクタは素直な2進表現ではないので、変換テーブルが必要
 *
 PLOTD0	FCB	$0,$7,$9,$4,$A,$D,$1,$E,$2,$5,$B,$6,$8,$F,$3,$C	; CHR->dot
 PLOTD1	FCB	$0,$6,$8,$E,$3,$9,$B,$1,$C,$2,$4,$A,$F,$5,$7,$D ; dot->CHR
