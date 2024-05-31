@@ -161,9 +161,9 @@ LN6	EOR A	RNDS		; 乱数初期値変化
 	BEQ	BSDEL
 	CMP A	#$0D		; CR
 	BEQ	LNCR
-	CMP A	#$20		; other Control code?
+	CMP A	#$20		; 他のコントロールコードは無視		
 	BCS	LN6
-LN61	BSR	OUTEE1		; 通常文字
+LN61	BSR	OUTEE1		; 通常文字はエコーバック
 	INX
 	CPX	#EOBF
 DC	BNE	LN6
