@@ -9,8 +9,8 @@ NAKAMOZU Tiny BASIC port to BASIC MASTER L2.
 ## 追加機能
 
 ```
-LOAD	FILENAME
-SAVE	FILENAME
+LOAD	FILENAME	バグってる
+SAVE	FILENAME	バグってる
 PLOT(X,Y,d)
 	X = 0-63, Y=0-47, d=0-1
 ```
