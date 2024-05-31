@@ -32,6 +32,8 @@ CURPOS	EQU	$FFF5
 BREAKV	EQU	$0004
 WIDTH	EQU	32
 HEIGHT	EQU	24
+GWIDTH	EQU	WIDTH*2
+GHEIGHT	EQU	HEIGHT*2
 *
 NEG	EQU	$3C06		; GRAPHIC SUB
 PICK	EQU	$3BF7
@@ -89,6 +91,7 @@ EOP	RMB	2		; '\'
 MEMEND	RMB	2		; ']'
 IXV	RMB	20		; IX変数エリア '%0'〜'%9'
 	ORG	$0500
+DIRECT	RMB	2		; DIRECT MODE用行番号
 BFFR	RMB	256		; 入力バッファ
 BFFREND	EQU	*+1
 EOBF	EQU	*		; 算術STACK
@@ -116,8 +119,10 @@ BREAK2	TPA
 BREAK	TST	isBREAK
 	RTS
 * 
-INEEE	JSR	$0028		; INPUT & ECHO BACK
-	JMP	$002B
+INECHO	BSR	INEEE		; INPUT & ECHO BACK
+	BRA	OUTEE1
+INEEE	LDA A	#'_'		; INPUT only
+	JMP	$0028
 OUTEEE	TST	FS
 	BEQ	OUTEE1
 	JSR	SHOOK
@@ -141,36 +146,59 @@ LN2	LDA A	#'>'		; プロンプト出力
 	JSR	OUT
 	FCB	$8C		; （2バイトスキップ）
 LN3	BSR	CR2
-LN4	LDX	#BFFR+1
-LN5	DEX
-	CPX	#BFFR-1
-	BEQ	LN3
+LN4	LDX	#BFFR
+;LN4	LDX	#BFFR+1
+;LN5	DEX
+;	CPX	#BFFR-1
+;	BEQ	LN3
 LN6	EOR A	RNDS		; 乱数初期値変化
 	STA A	RNDS
 	BSR	IN
 	STA A	0,X
 	CMP A	#$7F		; 後退
-	BEQ	LN5
+	BEQ	BSDEL
 	CMP A	#$08		; BS
-	BEQ	LN5
-	CMP A	#$D
-	BNE	LN7		; CR処理
-	CLR	0,X
-	STX	EOB
-	BRA	CR2
-*
-LN7	CMP A	#$18		; 一行まっ消?
-	BEQ	LN1
-	CMP A	#$1F
+	BEQ	BSDEL
+	CMP A	#$0D		; CR
+	BEQ	LNCR
+	CMP A	#$20		; other Control code?
 	BCS	LN6
+LN61	BSR	OUTEE1		; 通常文字
 	INX
 	CPX	#EOBF
 DC	BNE	LN6
-ERR1	LDA B	#1
+ERR1	LDA B	#1		; 入力が長すぎる Error.1
 	JMP	ERR
+BSDEL	CPX	#BFFR		; 行頭？
+	BNE	BSDEL1
+	LDA A	#$07		; 行頭ならBell鳴らす
+	BSR	OUTEE1
+	BRA	LN6
+BSDEL1	LDA A	#$7F		; それ以外は後退
+	BSR	OUTEE1
+	DEX
+	BRA	LN6
+LNCR	BSR	OUTEE1		; CR
+	CLR	0,X		; CR処理
+	TPA
+	STA A	1,X		; 行番号相当部分をマイナスにしておく
+	STX	EOB
+	BRA	CR2
+*
+;LN7	;CMP A	#$18		; 一行まっ消?
+;	;BEQ	LN1
+;	CMP A	#$1F
+;	BCS	LN6
+;	INX
+;	CPX	#EOBF
+;DC	BNE	LN6
+;ERR1	LDA B	#1
+;	JMP	ERR
 *
 IN	LDA A	#'_'		; カーソル
-	BRA	INEEE
+	JMP 	$0028
+IN9	JSR	$002B		; echo back
+	RTS
 ;	BSR	INEEE
 ;	CMP A	#3		; CNT-C?
 ;	BEQ	END
@@ -347,10 +375,10 @@ END	LDS	#STACK		; "END"
 END1	LDX	#READY		; READY
 	JSR	MGOUT
 	JSR	CR
-	TPA			; ダイレクトモード処理
-	STA A	EADRS		; (実行ADRSを負にする)
-				;      ↓
-				; ・ERR処理済み
+	TPA			;
+	STA A	DIRECT		; ダイレクトモード処理
+	LDX	#DIRECT
+	STX	EADRS
 *
 EDIT	LDS	#STACK		; コマンド&エディットモードメインルーチン
 ED1	JSR	LINEIN
@@ -457,6 +485,7 @@ REM	TST	0,X
 	RTS
 *				;（行番号捜す）
 SCHEND	LDX	EADRS
+	TST	DIRECT
 	BPL	SL1		; 実行ADRSが負なら
 SCHLIN	LDX	BOP		; 前から捜す
 	INX
@@ -496,15 +525,16 @@ SIZE	LDA A	MEMEND+1	; 残りメモリー計算
 END2	JMP	END1
 *				; [実行モード]
 RUN	BSR	INITP
+	CLR	DIRECT
 	LDX	BOP
 	INX
-RN1	STX	EADRS		; TEXTの終わりまで行った    ; RN1はオリジナルではここ
-	LDA A	0,X		; 　時 又はDIRECT MODE	    ; RN1ここがいい?
-	ASL A			; 　の時は終る
-	LDA A	EADRS
-	BLS	END2		; DIRECT MODEの
-	INX			; 　時はEADRSの最上位bit
-	INX			;	をたてている
+RN1	STX	EADRS		; TEXTの終わりまで行った
+	TST	DIRECT
+	BNE	END2
+	LDA A	0,X		; 　時 又はDIRECT MODEの時は終わる
+	BMI	END2
+RN12	INX			; 行番号スキップ
+	INX
 RN2	JSR	BRK
 	JSR	CHVAR		; 変数チェック
 	BCS	RN31
@@ -519,8 +549,8 @@ RN4	LDS	#STACK
 RN5	JSR	PKUP
 	BNE	RN5
 RN6	INX
-	BCC	RN1
-	BRA	RN2
+	BCC	RN1		; 行末 00
+	BRA	RN2		; ':' マルチステートメント
 *				; 16進入力処理
 HB1	ROL A
 	ASL A
@@ -1581,6 +1611,7 @@ ERR	LDS	#STACK		    ; SPの初期化
 	STA B	WKUSE
 	BSR	CCP3
 ERRBRK	LDX	EADRS
+	TST	DIRECT
 	BMI	TOEND		    ; DIRECT MODE 以外なら
 	CPX	#BFFREND
 	BMI	TOEND
@@ -1663,30 +1694,37 @@ SETPT	LDA A	0,X
 	CMP A	#'W'
 	BNE	G2
 	BSR	SUB3
-	JSR	SET
+	PSH A
+	PSH B
+	LDA A	#1
+	STA A	WKA
+G0	JSR	PLOT0
 G1	LDX	XS
 	RTS
 *				    ;"!B(X.Y)"ステートメント
 G2	CMP A	#'B'
 	BNE	G3
 	BSR	SUB3
-	JSR	RESET
-	BRA	G1
+	PSH A
+	PSH B
+	CLR	WKA
+	BRA	G0
 *				    ;"!R(X,Y)"ステートメント
 G3	CMP A	#'R'		    
  	BNE	ERR15
 	BSR	SUB3
-	JSR	REVERS
-	BRA	G1
+	TPA
+	STA A	WKA
+	BRA	G0
 *
 SUB5	LDA B	0,X
 	CMP B	#'('
 	RTS
 *
 SUB3	BSR	SUB1
-SUB4	CMP A	#64		    ; GRAPHIC
+SUB4	CMP A	#GWIDTH		    ; GRAPHIC
  	BCC	ERR16		    ; 　引数範囲の
-	CMP B	#48		    ; 　チェック
+	CMP B	#GHEIGHT	    ; 　チェック
 	BCC	ERR16
 	RTS
 *
@@ -1732,10 +1770,11 @@ C2	STA B	0,X		    ; 　に変更
 	INX
 	CPX	ADP+2
 	BNE	C2
-	LDX	XS
+CE	LDX	XS
 	RTS
 *
 ALLCLR	JSR	CLRTV
+	BRA	CE
 *
 C3	CLR A			    ; 引数からADRS計算
 	ASL B
@@ -2040,18 +2079,17 @@ STARTM	FCB	$0C
 *
 PLOT	JSR     SUB10
 	JSR	CCP4		; 第1引数
-	AND A	#(WIDTH*2)-1
 	PSH A
 	BSR	PLOT8		; 第2引数
-	CMP A	#HEIGHT*2
-	BCC	PLOT8
-	TST B
-	BNE	PLOT8
+	TAB			; B<-pos X
+	PUL A			; A<-pos Y
+	JSR	SUB4
 	PSH A
+	PSH B
 	BSR	PLOT8		; 第3引数
 	STA A	WKA
 	JSR	CUL4
-	STX	WKC		; SAVE IX
+PLOT0	STX	WKC		; SAVE IX
 *
 	PUL B			; 第2引数 Y→ACCB
 	CLR	WKA+1
@@ -2084,16 +2122,19 @@ PLOT3	CLR A
 	STA B	ADP+1
 	STA A	ADP
 	LDX	ADP
-	LDA B	0,X
-	TST	WKA		; dot on or off
-	BNE	PLOT5
-	COM	WKA+1		; dot off
+	LDA B	0,X		; PLOT先のキャラクタのbitパターン
+	LDA A	WKA		; 0:off? >0:on <0:reverse?
+	BEQ	PLOTOFF
+	BPL	PLOT5
+	EOR B	WKA+1		; dot xor
+	BRA	PLOT6
+PLOTOFF	COM	WKA+1		; dot off
 	AND B	WKA+1
 	BRA	PLOT6
 PLOT5	ORAB	WKA+1		; dot on
 PLOT6	CLR A
 	ADD B	#PLOTD1
-	ADC A	#PLOTD0/256
+	ADC A	#PLOTD1/256
 	STA B	ADP+1
 	STA A	ADP
 	LDX	ADP
