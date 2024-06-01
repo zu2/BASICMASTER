@@ -12,7 +12,7 @@ NAKAMOZU Tiny BASIC port to BASIC MASTER L2.
 LOAD	FILENAME	バグってる
 SAVE	FILENAME	バグってる
 PLOT(X,Y,d)
-	X = 0-63, Y=0-47, d=0-1
+	X = 0-63, Y=0-47, d=0,1,-1
 ```
 
 ## BUG?
