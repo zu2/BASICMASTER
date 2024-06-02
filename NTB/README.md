@@ -8,7 +8,9 @@ NAKAMOZU Tiny BASIC port to BASIC MASTER L2.
 
 ## DEMO
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/M3DNZJXfutU?si=HH_DTkVdCIpm8iQp" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![NAKAMOZU Tiny BASIC on Hitachi BASIC MASTER Emulator](http://img.youtube.com/vi/M3DNZJXfutU/0.jpg)](https://www.youtube.com/watch?v=M3DNZJXfutU)
+
+
 
 ## 追加機能
 
