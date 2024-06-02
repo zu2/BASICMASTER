@@ -15,9 +15,12 @@ GAME68 interpriter for Hitach BASIC MASTER.
 
 ## 追加機能
 
+仕様は変更するかも。
+```
 [S FILENAME		SAVE
 [L FILENAME		LOAD
 [A FILENAME		APPEND
+```
 
 ## BUG?
 
