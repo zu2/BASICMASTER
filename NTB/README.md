@@ -6,6 +6,10 @@ NAKAMOZU Tiny BASIC port to BASIC MASTER L2.
 
 - [Nakamozu Tiny Basic /ASCII](https://hyamasynth.web.fc2.com/ACII_NTB/ACII_NTB.html)
 
+## DEMO
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/M3DNZJXfutU?si=HH_DTkVdCIpm8iQp" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
 ## 追加機能
 
 ```
