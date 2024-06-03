@@ -21,6 +21,7 @@ Softwares and Documents for Hitach BASIC MASTER L2/L2II/Jr.
 ## NTB
 
 - NAKAMOZU Tiny BASIC port to BASICMASTER.
+- 簡易グラフィック機能を追加してあります
 
 ## GAME68
 
