@@ -20,7 +20,13 @@ Softwares and Documents for Hitach BASIC MASTER L2/L2II/Jr.
 
 ## NTB
 
-NAKAMOZU Tiny BASIC port to BASICMASTER.
+- NAKAMOZU Tiny BASIC port to BASICMASTER.
+
+## GAME68
+
+- GAME3の移植版。BMUGで配布されていたGAME/BMではありません。
+- GAME/BMに合わせて機能追加しています。
+- 変数・特殊変数を0ページではなく4ページに置いているので、GAME Compilerを作るのは大変かも
 
 ## Documents
 
