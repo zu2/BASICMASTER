@@ -22,5 +22,12 @@ GAME68 interpriter for Hitach BASIC MASTER.
 [A FILENAME		APPEND
 ```
 
+論理演算
+```
+A\&B				AND
+A.B				OR
+A!B				XOR
+```
+
 ## BUG?
 
