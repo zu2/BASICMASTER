@@ -807,14 +807,6 @@ NEGX	NEG	1,X		;       （負 C=1）
 NEGX1	COM	0,X
 RTN5	RTS
 *
-CHASC	CMP A	#'@'		; ASCII CHECK
-	BCS	CHV1		; 'A'〜'Z' →C=1
-	CMP A	#'Z'+1		; 他       →C=0
-	RTS
-*
-CHV1	CLC
-	RTS
-*
 CHVAR	BSR	PKUP		; 変数チェック
 	STX	XS		; TABLEへ行く必要の
 	CMP A	#'!'		; 　あるもの C=1
@@ -829,7 +821,15 @@ CHVAR	BSR	PKUP		; 変数チェック
 	CMP A	#'.'
 	BEQ	TBL
 	BSR	CHASC
-	BCC	CHV1
+;	BCC	CHV1
+;	RTS
+*
+CHASC	CMP A	#'@'		; ASCII CHECK
+	BCS	CHV1		; 'A'〜'Z' →C=1
+	CMP A	#'Z'+1		; 他       →C=0
+	RTS
+*
+CHV1	CLC
 	RTS
 *				;(PICKUP)
 ICPKUP	INX
