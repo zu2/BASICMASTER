@@ -49,3 +49,14 @@ A!B				XOR
 ## BUG
 
 - bm2で起動時にゴミが表示される（修正済み。初期化漏れがあった）
+
+## 資料
+
+- [エンサイクロペディア・アスキー volume 2 - 国立国会図書館デジタルコレクション](https://dl.ndl.go.jp/pid/10259290)
+- [エンサイクロペディア・アスキー volume 3 - 国立国会図書館デジタルコレクション](https://dl.ndl.go.jp/pid/12631628)
+- [エンサイクロペディア・アスキー volume 4 - 国立国会図書館デジタルコレクション](https://dl.ndl.go.jp/pid/12631630)
+- [エンサイクロペディア・アスキー volume 5 - 国立国会図書館デジタルコレクション](https://dl.ndl.go.jp/pid/12631635)
+- [エンサイクロペディア・アスキー volume 6 - 国立国会図書館デジタルコレクション](https://dl.ndl.go.jp/pid/12631585)
+- [6809 / 6800とFLEX: 6800用GAMEインタプリタとコンパイラの6809への移植がようやく完成](https://flexonsbd.blogspot.com/2024/03/6800game6809.html)
+- [GAME68コンパイラ : 電子工作やってみたよ](https://telmic.exblog.jp/30174191/)
+- [GAME68 - ずmemo](https://wiliki.zukeran.org/old/1543448974.html)
