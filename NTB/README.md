@@ -14,9 +14,12 @@ NAKAMOZU Tiny BASIC port to BASIC MASTER L2.
 
 ## 追加機能
 
+OLDはGAME言語の == と同じく、プログラム末尾を探してポインタを正しく設定する。
+
 ```
 LOAD	FILENAME
 SAVE	FILENAME
+OLD
 PLOT(X,Y,d)
 	X = 0-63, Y=0-47, d=0,1,-1
 ```
