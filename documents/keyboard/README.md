@@ -12,3 +12,6 @@
 - ebmjr.json
 - j68.json
 - j68\_macos.json
+
+jsonファイルは下記サイトで使えます。
+- [Keyboard Layout Editor](http://www.keyboard-layout-editor.com/)
