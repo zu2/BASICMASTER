@@ -1,0 +1,190 @@
+[
+  {
+    "name": "mb6881",
+    "notes": "Hitach BASIC MASTER  L2II MB-6881\n"
+  },
+  [
+    {
+      "x": 1
+    },
+    "\n\n\n\n\n\n1\n\n!\n\nヌ",
+    "\n\n\n\n\n\n2\n\n\"\n\nツ",
+    "\n\n\n\n\n\n3\nァ\n#\n\nア",
+    "\n\n\n\n\n\n4\nゥ\n$\n\nウ",
+    "\n\n\n\n\n\n5\nェ\n%\n\nエ",
+    "\n\n\n\n\n\n6\nォ\n&\n\nオ",
+    "\n\n\n\n\n\n7\nャ\n'\n\nヤ",
+    "\n\n\n\n\n\n8\nュ\n(\n\nユ",
+    "\n\n\n\n\n\n9\nョ\n)\n\nヨ",
+    "\n\n\n\n\n\n0\nヮ\n\n\nワ",
+    "\n\n\n\n\n\nー\n\n＝\n\nネ",
+    "\n\n\n\n\n\n^\n\n→\n\nヘ",
+    "\n\n\n\n\n\n￥\n\n←\n\n_",
+    {
+      "a": 5
+    },
+    "後\n退"
+  ],
+  [
+    {
+      "x": 0.5
+    },
+    "RESET\nBREAK",
+    {
+      "a": 4
+    },
+    "\n\n\n\n\n\nQ\n\n\n\nタ",
+    "\n\n\n\n\n\nW\n\n\n\nテ",
+    "\n\n\n\n\n\nE\nィ\n\n\nイ",
+    "\n\n\n\n\n\nR\n\n\n\nス",
+    "\n\n\n\n\n\nT\n\n\n\nカ",
+    "\n\n\n\n\n\nY\n\n\n\nン",
+    "\n\n\n\n\n\nU\n\n\n\nナ",
+    "\n\n\n\n\n\nI\n\n\n\nニ",
+    "\n\n\n\n\n\nO\n\n\n\nラ",
+    "\n\n\n\n\n\nP\n\n\n\nセ",
+    {
+      "fa": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "\n\n\n\n\n\n@\n\n↑\n\n゛",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\n[\n「\n↓\n\n゜",
+    {
+      "a": 7,
+      "w": 2
+    },
+    "復改"
+  ],
+  [
+    {
+      "x": 1,
+      "a": 5
+    },
+    "英\n号\n\n\n\n\n記",
+    {
+      "a": 4,
+      "f": 3
+    },
+    "\n\n\n\n\n\nA\n\n\n\nチ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nS\n\n\n\nト",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nD\n\n\n\nシ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nF\n\n\n\nハ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nG\n\n\n\nキ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nH\n\n\n\nク",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nJ\n\n\n\nマ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nK\n\n\n\nノ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nL\n\n\n\nリ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\n；\n\n+\n\nレ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\n：\n\n＊\n\nケ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\n]\n」\n\n\nム",
+    "\n号\nカ\n\n\n\n記\nナ"
+  ],
+  [
+    {
+      "x": 1.5,
+      "a": 5
+    },
+    "英\n数",
+    {
+      "a": 4,
+      "f": 3
+    },
+    "\n\n\n\n\n\nZ\nッ\n\n\nツ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nX\n\n\n\nサ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nC\n\n\n\nソ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nV\n\n\n\nヒ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nB\n\n\n\nコ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nN\n\n\n\nミ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\nM\n\n\n\nモ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\n,\n、\n<\n\nネ",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\n.\n。\n>\n\nル",
+    {
+      "f": 3
+    },
+    "\n\n\n\n\n\n/\n・\n?\n\nメ",
+    {
+      "a": 5
+    },
+    "_\nロ",
+    "カ\nナ"
+  ],
+  [
+    {
+      "x": 3.5,
+      "a": 7,
+      "w": 8
+    },
+    ""
+  ]
+]
