@@ -32,7 +32,8 @@ BASICMASTER完全フルキーボード化プログラム用のテキストに変
 (I/O誌1980年3月号P.89、1980年8月号P.96参照）
 
 これで変換したテキストファイルをエミュレータにPasteできる。
-（j68ではファイルから読み込むときも変換可能。Keyboard→FullChar Patch）
+
+j68ではファイルから読み込むときも変換可能なのでこのプログラムは不要かも（Keyboard→FullChar Patch）
 
 
 ## game2bin
