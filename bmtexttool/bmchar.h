@@ -7,6 +7,7 @@ typedef	struct	{
 		unsigned char	*to;
 		} pair_t;
 pair_t table[] = {
+			{" ",       "\x20" },
 			{"　",		"\x20" },		// 全角スペース
 			{"α",		"\x10" },
 			{"β",		"\x11" },
