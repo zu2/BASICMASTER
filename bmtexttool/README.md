@@ -20,11 +20,20 @@ UNICODEテキストファイルをBASICMASTER BASIC形式のテキストに変�
 
 BASICMASTER BASIC形式のテキストファイルを UNICODEのテキストに変換する。
 
-./txt2bm file
+./bm2txt file
 
 BASIC形式のテキストは、例えばbmtape2などのツールでwavから吸い出して作成できる。
 
 LISTコマンドの結果を拾えるといいのですが。
+
+## txt2bmf
+
+BASICMASTER完全フルキーボード化プログラム用のテキストに変換する。
+(I/O誌1980年3月号P.89、1980年8月号P.96参照）
+
+これで変換したテキストファイルをエミュレータにPasteできる。
+（j68ではファイルから読み込むときも変換可能。Keyboard→FullChar Patch）
+
 
 ## game2bin
 
