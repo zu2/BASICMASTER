@@ -13,6 +13,10 @@ GAME68 interpriter for Hitach BASIC MASTER.
 ## DEMO
 
 
+- https://youtu.be/H7nNazKI7cg?si=s2Mx-cjKBpMB6fUf
+![https://youtu.be/H7nNazKI7cg?si=s2Mx-cjKBpMB6fUf](20240604-GAME68-2.png)
+
+
 ## 追加機能
 
 SAVE/LOAD/APPENDの仕様は変更するかも。
