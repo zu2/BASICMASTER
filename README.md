@@ -4,6 +4,8 @@
 
 Softwares and Documents for Hitach BASICMASTER L2/L2II/Jr.
 
+blog: [https://www.zukeran.org/shin/d/category/pc/basicmaster/](https://www.zukeran.org/shin/d/category/pc/basicmaster/)
+
 ## LIFE2
 
 - LIFE GAMEの亜種。雑誌か何かで読んだものだと思うが覚えていない
