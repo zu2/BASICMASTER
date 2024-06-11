@@ -110,6 +110,7 @@ CSTCK	EQU	*		; FOR NEXT STACK
 	RMB	64
 FSTCK	EQU	*
 *
+;	RMB	2
 IXV	RMB	20		; IX変数エリア '%0'〜'%9'
 	ORG	$0700
 IOBUF	RMB	256		; SAVE/LOAD BUF
@@ -243,6 +244,8 @@ DEL2	STX	EOP
 	STA A	0,X
 	RTS
 *
+OLD	BSR	OTST
+	JMP	END
 OTST	LDX	BOP
 	CLR	0,X
 OTST2	INX
@@ -386,8 +389,6 @@ CSTART	LDS	#STACK
 	LDX	#ENDTXT
 	STX	MEMEND
 *
-OLD	JSR	OTST
-	BRA	END
 NEW	JSR	PTST		; "NEW"
 END	LDS	#STACK		; "END"
 	CLR	isBREAK
@@ -1079,7 +1080,7 @@ TBAX	STX	XS		; IX←BA
 	STA B	WKC
 	BRA	CPS4
 *				;"MOD"
-MOD	JSR	SUB5
+MOD	JSR	SUB5		; "(" ?
 	BEQ	MOD1
 	LDA B	MDS		; 引数なしの時
 	LDA A	MDS+1
@@ -1155,7 +1156,7 @@ ARR	INX			; IX変数 IX配列
 	JSR	TSTN		; 10進チェック
 	BCC	ERR14
 	INX
-	JSR	SUB5
+	JSR	SUB5		; "("?
 	BEQ	IND
 DIR	AND A	#$F		; IX変数 ADRS計算
 	ASL A
@@ -1733,7 +1734,7 @@ G3	CMP A	#'R'
 	STA A	WKA
 	BRA	G0
 *
-SUB5	LDA B	0,X
+SUB5	LDA B	0,X		    ; "(" ?
 	CMP B	#'('
 	RTS
 *
@@ -1745,7 +1746,7 @@ SUB4	CMP A	#GWIDTH		    ; GRAPHIC
 	RTS
 *
 SUB1	INX
- 	BSR	SUB5
+ 	BSR	SUB5		    ; "(" ?
 	BNE	ER9
 SUB6	INX
 SUB2	JSR	SUB7		    ; 2引数
@@ -1765,7 +1766,7 @@ CMP	BCC	ERR16		    ; 引数範囲チェック
 	BGT	ERR16
 	RTS
 *				    ;"CLR(X,Y)"
-CLR	BSR	SUB5
+CLR	BSR	SUB5		    ; "(" ?
 	BNE	ALLCLR		    ; if引数なし
 	BSR	SUB6
 	CMP B	#HEIGHT
@@ -1833,7 +1834,7 @@ ZERO	JMP	CPS2
 *
 ER7	JMP	ERR7
 *
-SUB10	JSR	SUB5
+SUB10	JSR	SUB5		    ; "(" ?
  	BNE	ER7
 	INX
 	RTS
@@ -1910,8 +1911,8 @@ ER11	JMP	ERR11
 *
 ERR17	LDA B	#17
 	JMP	ERR
-*				    ;"KEY"関数（注 HGF用）
-KEY	JSR	SUB5		    ;※別記
+*				    ;"KEY"関数（注 HGF用）※別記
+KEY	JSR	SUB5		    ; "(" ?
 	BEQ	K0
 	LDA B	#7
 	CLR A
