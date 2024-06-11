@@ -1,6 +1,7 @@
 # BASICMASTER
 
-Softwares and Documents for Hitach BASIC MASTER L2/L2II/Jr.
+日立ベーシックマスター L2/L2II/Jr 用のソフトウェアとドキュメント
+Softwares and Documents for Hitach BASICMASTER L2/L2II/Jr.
 
 ## LIFE2
 
