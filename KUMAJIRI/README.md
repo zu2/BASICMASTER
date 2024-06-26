@@ -27,20 +27,20 @@ $2000番地から実行するとコンパイルを行う。
 
 ## Memory Map
 
-00E0-00F3	K-CPU work area
-0B00-0FB5	K-CPU
-1000-		K-Compiler Work	(T)
-1500-		K-Compiler Work	(S)
-1600-		K-Compiler Work	(I)
-1800-		EDITOR
-1FA0		return from compiler (no error).
-1FA5		return from compiler (with error).
-(1FFC,D)	Source program Top address-1
-(1FFE,F)	Source program End address+4
-2000-32FF	K-Compiler
-(324F,50)	jump to Compile end (no error)
-(32E5,E6)	jump to Compile end (error)
-3400-		Source code
+- 00E0-00F3	K-CPU work area
+- 0B00-0FB5	K-CPU
+- 1000-		K-Compiler Work	(T)
+- 1500-		K-Compiler Work	(S)
+- 1600-		K-Compiler Work	(I)
+- 1800-		EDITOR
+- 1FA0		return from compiler (no error).
+- 1FA5		return from compiler (with error).
+- (1FFC,D)	Source program Top address-1
+- (1FFE,F)	Source program End address+4
+- 2000-32FF	K-Compiler
+- (324F,50)	jump to Compile end (no error)
+- (32E5,E6)	jump to Compile end (error)
+- 3400-		Source code
 
 本ディレクトリにはEDITORは含まれていません（日立のアセンブラを流用したため）。
 
