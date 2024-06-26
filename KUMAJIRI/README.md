@@ -9,12 +9,12 @@ TEW版KUMAJIRI/BMの改良版です。I/O別冊のものとは微妙に異なり
 
 ## Directory List
 
-K-COMP.B.mot	KUMAJIRIコンパイラのバイナリ
-K-COMP.S		KUMAJIRIコンパイラのソースリスト
-K-COMP.S.mot	上記のmotorola S形式
-K-CPU.asm		K-CODEインタプリタソースリスト
-K-CPU.mot		上記のmotorola S形式
-README.md		このファイル
+- K-COMP.B.mot	KUMAJIRIコンパイラのバイナリ
+- K-COMP.S		KUMAJIRIコンパイラのソースリスト
+- K-COMP.S.mot	上記のmotorola S形式
+- K-CPU.asm		K-CODEインタプリタソースリスト
+- K-CPU.mot		K-CODEインタプリタのバイナリ
+- README.md		このファイル
 
 ## recompile KUMAJIRI Compiler
 
