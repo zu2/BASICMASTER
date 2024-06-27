@@ -35,6 +35,11 @@ blog: [https://www.zukeran.org/shin/d/category/pc/basicmaster/](https://www.zuke
 - 変数・特殊変数を0ページではなく4ページに置いているので、GAME Compilerを作るのは大変かも
 - 詳細は [GAME68/README.md](GAME68/README.md) 参照
 
+## KUMAJIRI
+
+- KUMAJIRI compiler
+- 詳細は [KUMAJIRI/README.md](KUMAJIRI/README.md) 参照
+
 ## bmtexttool
 
 - UNIX環境とBASIC MASTER内とのテキストデータの変換ツール
