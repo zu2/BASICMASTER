@@ -7,6 +7,10 @@ TEW版KUMAJIRI/BMの改良版です。I/O別冊のものとは微妙に異なり
 
 - I/O別冊システムプログラムライブラリ2 p.224 「KUMAJIRIコンパイラ」
 
+## DEMO
+
+- [https://www.youtube.com/watch?v=cs1DSGrmPYA](https://www.youtube.com/watch?v=cs1DSGrmPYA)
+
 ## Directory List
 
 - K-COMP.B.mot	KUMAJIRIコンパイラのバイナリ
@@ -90,3 +94,4 @@ KUMAJIRIのソースコードの行末はCR($0D)、ファイル末は$0Dの後�
 	- エディタは日立アセンブラ32KB版をそのまま使う($6F00-)
 	- ソースプログラム開始エリアは($6EFC,D)、終了は($6EFE,F)
 - BMUG会報 1983.11 p.12によると、この他にもBMUG会員による移植が2つ（以上？)存在したようだ
+
