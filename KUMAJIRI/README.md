@@ -87,9 +87,13 @@ KUMAJIRIのソースコードの行末はCR($0D)、ファイル末は$0Dの後�
 
 ## RANPAKU Editor版
 
-月刊I/O 1980年8月掲載のエディタをBASICMASTERに移植したものとのセット。I/O 1981年4月号の移植とは別です。カセットSAVE/LOADも追加してあります。
+KUMAJIRIコンパイラ、中間言語インタプリタ、エディタ込みの一式セットです。
 
-CALL $1800でエディタが起動します。
+エディタは月刊I/O 1980年8月掲載のエディタをBASICMASTERに移植したものです。
+
+I/O 1981年4月号の移植とは別です。カセットSAVE/LOADも追加してあります。
+
+hexまたはmot読み込み後、CALL $1800でエディタが起動します。
 
 - [K-ALL.ranpaku.hex](./K-ALL.ranpaku.hex)
 - [K-ALL.ranpaku.mot](K-ALL.ranpaku.mot)
