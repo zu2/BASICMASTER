@@ -31,14 +31,17 @@ $2000番地から実行するとコンパイルを行う。
 
 ## Memory Map
 
+TEW版
+
 - 00E0-00F3	K-CPU work area
+- 0700-07FF K-Compiler Work (Variables)
 - 0B00-0FB5	K-CPU
 - 1000-		K-Compiler Work	(T)
 - 1500-		K-Compiler Work	(S)
 - 1600-		K-Compiler Work	(I)
-- 1800-		EDITOR
-- 1FA0		return from compiler (no error).
-- 1FA5		return from compiler (with error).
+- 1800-		Hitachi EDITOR
+- 1FA0		return from compiler to hitach editor (no error).
+- 1FA5		return from compiler to hitach editor (with error).
 - (1FFC,D)	Source program Top address-1
 - (1FFE,F)	Source program End address+4
 - 2000-32FF	K-Compiler
@@ -63,9 +66,10 @@ $2000番地から実行するとコンパイルを行う。
 エディタが$1800-に無い場合は、適宜書き換えるか、$1FA0,$1FA5をSWI($3F)にしておく。
 これらは、$324F($1F,$A0)、$32E5($1F,$A5)で変更できる。
 
-## Editor
+## Hitachi Editor版
 
-エディタは日立エディタ・アセンブラを流用したため、このディレクトリには含まれていない。
+I/O別冊に投稿した記事では、エディタは日立エディタ・アセンブラを流用した。
+このディレクトリには含まれていない。
 
 エディタからはG2000でコンパイルすることを想定している。
 
@@ -78,6 +82,70 @@ KUMAJIRIのソースコードの行末はCR($0D)、ファイル末は$0Dの後�
 
 メモリが32KBを超える場合に、SOURCE TOP ADDRから先に進まなくなる。オリジナルにも存在するBUG.
 ($18B7のBGTはBHIが正しい。2E→22にする。オリジナル日立アセンブラなら$2FB7の$2E→$22）
+
+- [https://youtu.be/cs1DSGrmPYA?si=2iNDXDNd7sduzvI1](https://youtu.be/cs1DSGrmPYA?si=2iNDXDNd7sduzvI1)
+
+## RANPAKU Editor版
+
+月刊I/O 1980年8月掲載のエディタをBASICMASTERに移植したものとのセット。I/O 1981年4月号の移植とは別です。カセットSAVE/LOADも追加してあります。
+
+CALL $1800でエディタが起動します。
+
+- [K-ALL.ranpaku.hex](./K-ALL.ranpaku.hex)
+- [K-ALL.ranpaku.mot](K-ALL.ranpaku.mot)
+
+コンパイラソースの変更箇所は以下の通り。
+
+```
+--- KUMAJIRI-source.S	2024-05-25 12:28:47
++++ KUMAJIRI-ranpaku.S	2024-07-03 17:25:30
+@@ -1,7 +1,7 @@
+ *** KUMAJIRI COMPILER ***
+ //" - TRANSFORM K-CODE -"//
+-A=$1FFE A=A(0) A:-4)=$FF
+-X=$1FFC X=X(0)
++A=$180B A=A(0)
++X=$1807 X=X(0)
+ " SOURCE PROGRAM FROM $" ??=X+1
+ /" OBJECT PROGRAM FROM " Z=? Y=Z+3
+  " VARIABLE ADDRESS FROM " V=?
+@@ -168,10 +168,10 @@
+ &
+ //" TRANSFORMATION END."
+ /"   OBJECT PROGRAM : $" ??=Z "-$" ??=Y+1 Y(1)=$776 Y(2)=$A033
+->=$1FA0
++>=$1802
+ IL. /" ILLEGAL NESTING " EFLAG=1 ]
+ LORN. ;=B>"9"&(B<"A").(B<"0").(B>"Z") B=0 : B=1 ; ]
+ ERROR. A=X @ A=A-1 @=A:0)=$D B=$A3 B(0)=N
+-@ A=A+1 $=A:0) @=A=X / >=$1FA5
++@ A=A+1 $=A:0) @=A=X / >=$1802
+ *
+ ****
+```
+
+### 使用例
+
+- [https://youtu.be/ylioAQ-ejrg?si=YXtFhy-8xBeEI8f7](https://youtu.be/ylioAQ-ejrg?si=YXtFhy-8xBeEI8f7)
+
+### TEW版+RANPAKUエディタ版メモリマップ
+
+- 00E0-00F3	K-CPU work area
+- 0700-07FF K-Compiler Work (Variables)
+- 0B00-0FB5	K-CPU
+- 1000-		K-Compiler Work	(T)
+- 1500-		K-Compiler Work	(S)
+- 1600-		K-Compiler Work	(I)
+- 1800-		RANPAKU EDITOR
+- 1802		return from compiler to ranpaku editor.
+- (1807,8)	Source program Top address-1
+- (180B,C)	Source program End address
+- 2000-32FF	K-Compiler with RANPAKU
+- (3246,47)	jump to Compile end (no error)
+- (32DC,DD)	jump to Compile end (error)
+- 3400-		Source code
+
+
 
 ## 掲載雑誌・書籍
 
