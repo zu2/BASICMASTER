@@ -826,6 +826,7 @@ RTN5	RTS
 *
 CHVAR	BSR	PKUP		; 変数チェック
 	STX	XS		; TABLEへ行く必要の
+	BEQ	CHV1		; Z=1のときは区切りなのでC=0でreturn
 	CMP A	#'!'		; 　あるもの C=1
 	BEQ	TBL		; 　ないもの C=0
 	CMP A	#'.'
@@ -833,11 +834,11 @@ CHVAR	BSR	PKUP		; 変数チェック
 	CMP A	#'*'
 	BEQ	TBL
 	BSR	CHASC
-	BCC	CHV1
+	BCC	CHV2
 	LDA A	1,X
-	CMP A	#'.'
+	CMP A	#'.'		; コマンド短縮形?
 	BEQ	TBL
-	BSR	CHASC
+;	BSR	CHASC
 ;	BCC	CHV1
 ;	RTS
 *
@@ -847,7 +848,7 @@ CHASC	CMP A	#'@'		; ASCII CHECK
 	RTS
 *
 CHV1	CLC
-	RTS
+CHV2	RTS
 *				;(PICKUP)
 ICPKUP	INX
 PKUP	LDA A	0,X		; スペース読み飛ばす
