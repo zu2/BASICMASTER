@@ -97,6 +97,7 @@ VTOP	RMB	(26+1)*2	; 変数エリア dummy,'A'〜'Z'
 BOP	RMB	2		; システム変数 '['
 EOP	RMB	2		; '\'
 MEMEND	RMB	2		; ']'
+XSPWK	RMB	2		; PSHX/PULX work
 LSWK	RMB	2		; LOAD/SAVE IX save area
 LSWK2	RMB	2		; LOAD/SAVE IX save area2
 LSWK3	RMB	2		; LOAD/SAVE IX save area3
@@ -129,8 +130,8 @@ WSTRT2	JMP	END
 BREAK2	TPA
 	STAA	isBREAK
 	RTI
-BREAK	TST	isBREAK
-	RTS
+;BREAK	TST	isBREAK
+;	RTS
 *
 NMICLI	PSHA
 	JSR	NMICLR
@@ -259,9 +260,7 @@ OTST4	INX
 OTST8	STX	EOP		; TXT終わりマークがあった
 	RTS
 *
-BRK	PSH	A		; BREAK ?
-	JSR	BREAK
-	PULA
+BRK	TST	isBREAK		; BREAKed?
 	BEQ	BRK1
 	CLR	isBREAK
 	LDS	#STACK
@@ -380,8 +379,9 @@ STOP	JSR	PRINT		; STOP処理
 	BRA	END1
 *
 CSTART	LDS	#STACK
-;	JSR	INI4		; COLD START INITILIZE
+;	JSR	INI4		; COLD START INITILIZE for H68
 	CLR	isBREAK
+	JSR	CLRTV
 	LDX	#STARTM
 	JSR	MGOUT
 	LDX	#BGNTXT
@@ -483,7 +483,7 @@ INITP	LDX	#0		; FLAG & POINTER INITIALIZE
 	CLR	FS
  	LDX	#FSTCK
 	STX	FSP
-	LDX	#IXSTCK
+	LDX	#IXSTCK-2
 	STX	XSP
  	LDX	#CSTCK
 	STX	CSP
@@ -557,7 +557,7 @@ RN1	STX	EADRS		; TEXTの終わりまで行った。EADRS←行番号の位置
 	BMI	END2
 RN12	INX			; 行番号スキップ
 	INX
-RN2	JSR	BRK
+RN2	JSR	BRK		; BREAK check
 	JSR	CHVAR		; 変数チェック
 	BCS	RN31
 RN3	JSR	LET		; 代入文処理
@@ -572,7 +572,8 @@ RN31	LDX	#STATE		; ステートメント処理
 RN4	LDS	#STACK
 	JSR	TBLJP
 RN5	JSR	PKUP
-	BNE	RN5		; ERR19ではダメ？
+;	BNE	RN5		; ERR19ではダメ？
+	BNE	RN2		; ERR19ではダメ？
 RN6	INX
 	BCC	RN1		; 行末 00
 	BRA	RN2		; ':' マルチステートメント
@@ -824,19 +825,24 @@ NEGX	NEG	1,X		;       （負 C=1）
 NEGX1	COM	0,X
 RTN5	RTS
 *
-CHVAR	BSR	PKUP		; 変数チェック
-	STX	XS		; TABLEへ行く必要の
-	BEQ	CHV1		; Z=1のときは区切りなのでC=0でreturn
-	CMP A	#'!'		; 　あるもの C=1
-	BEQ	TBL		; 　ないもの C=0
+CHV0	INX
+;CHVAR	BSR	PKUP		; 変数チェック
+CHVAR	LDA	0,X
+	CMPA	#' '
+	BEQ	CHV0
+	STX	XS
+	BSR	CHASC
+	BCS	CHV3
+	CMP A	#'!'
+	BEQ	TBL	
 	CMP A	#'.'
 	BEQ	TBL
 	CMP A	#'*'
 	BEQ	TBL
-	BSR	CHASC
-	BCC	CHV2
-	LDA A	1,X
-	CMP A	#'.'		; コマンド短縮形?
+CHV1	CLC
+CHV2	RTS
+CHV3	LDA A	1,X
+	CMP A	#'.'
 	BEQ	TBL
 ;	BSR	CHASC
 ;	BCC	CHV1
@@ -847,8 +853,6 @@ CHASC	CMP A	#'@'		; ASCII CHECK
 	CMP A	#'Z'+1		; 他       →C=0
 	RTS
 *
-CHV1	CLC
-CHV2	RTS
 *				;(PICKUP)
 ICPKUP	INX
 PKUP	LDA A	0,X		; スペース読み飛ばす
@@ -871,6 +875,7 @@ EX2	CMP A	#'+'		; プラス&符号なし処理
 EX3	BSR	TM1
 EX4	LDX	XS
 	BSR	PKUP
+	BEQ	RTN7
 	CMP A	#'+'
 	BNE	EX6
 	BSR	TM1		; 加算
@@ -972,15 +977,20 @@ ATB1	STA B	WKC
 	SEC
 RTN9	RTS
 *				;（10進チェック）
-TSTN	JSR	PKUP
-	CMP A	#'0'		; 10進 C=1
-	CLC			; 他   C=0
-	BLT	TSTN1
-	CMP A	#':'
+TSTN0	INX
+TSTN	LDAA	0,X
+	CMP A	#'0'
+	BCS	TSTN2
+	CMP A	#'9'+1		; 10進 C=1
 TSTN1	RTS
+TSTN2	CMPA	#' '
+	BEQ	TSTN0
+	CLC			; < ' ' C=0
+	RTS
 *				;[第1レベル演算]
 TERM	BSR	FUNCT
 TR1	JSR	PKUP
+	BEQ	RTN9
 	CMP A	#'*'
 	BNE	TR3
 	BSR	TR4		; 乗算処理
@@ -1018,7 +1028,7 @@ LITRL	CMP A	2,X		; リテラル定数
 	BRA	CPS2
 *				;(関数TABLE JUMP)
 FUNCT	INX
-	BSR	ATOB		; ASCI→BINARY
+	JSR	ATOB		; ASCI→BINARY
 	BCS	CPS2		; if 数字なら
 	CMP A	#'#'		; if PEEK
 	BEQ	PEEK
@@ -1142,6 +1152,7 @@ NOTV	SEC
 	RTS
 *				;変数、IX変数、IX配列
 VAR	JSR	PKUP		;　ADRS計算
+	BEQ	NOTV
 	CMP A	#'%'		; IX変数 or IX配列
 	BEQ	ARR
 	CMP A	#'@'		; 単純変数チェック
@@ -1211,29 +1222,30 @@ POKE	JSR	FUNCT		; ADRS計算（再帰的）
 	TAB
 	BRA	LET2
 *				;（IXスタックPSH）
-PSHX	STS	SPS
-	JSR	NMISEI
-	TXS
-	LDX	XSP		; IXスタックポインタ
-	CPX	#STACK+3
+PSHX	PSHB
+	STX	XSPWK
+	LDX	XSP
+	CPX	#STACK+3-2
 	BEQ	ERR10
+	LDAB	XSPWK+1
+	STAB	1,X
+	LDAB	XSPWK
+	STAB	0,X
 	DEX
 	DEX
-	STS	0,X
-PX1	STX	XSP
-	TSX
-	LDS	SPS
-	JMP	NMICLI
+	STX	XSP
+	LDX	XSPWK
+	PULB
+	RTS
 *				;（IXスタックPUL）
 PULX	LDX	XSP
-	CPX	#IXSTCK
+	CPX	#IXSTCK-2
 	BEQ	ERR10
-	STS	SPS
-	JSR	NMISEI
-	LDS	0,X
 	INX
 	INX
-	BRA	PX1
+	STX	XSP
+	LDX	0,X
+	RTS
 *
 CLCPL	BSR	EXPR2		; 演算して結果 |B|A|
 CPUL	STX	WKC		; 算術スタックPUL
@@ -1935,8 +1947,7 @@ UNTIL	JSR	SUBIF		    ; 条件式の値
 	RTS
 *
 UNT	LDX	XSP		    ; 不成立なら
-	LDX	0,X		    ; 　IXSTACKの内容を
-	INX			    ; 　取りだし、そのADRSへ
+	LDX	2,X		    ; 　IXSTACKの内容を取りだし、そのADRSへ
 	RTS
 *				    ;SAUE, LIST. 解除
 ;CNT	FCB	3,$13,$14,0	    ; 　のためのCONTROL CORD
