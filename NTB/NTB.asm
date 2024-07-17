@@ -805,7 +805,6 @@ EX8	JSR	CPUL		; 算術スタック内の
 ADBA	ADD A	1,X
 	ADC B	0,X
 STBA	STA A	1,X
-
 	STA B	0,X
 RTN7	RTS
 *
@@ -824,7 +823,7 @@ EX13	ORAB	#4		; >  0000 0001
 	FCB	$C1		; <  0000 0100
 EX14	CLR B			; >= 0000 0011
 	BSR	PKUP		; <= 0000 0110
-	CMP A	#'>'		; <> 0000 0101
+EX15	CMP A	#'>'		; <> 0000 0101
 	BEQ	EX11
 	CMP A	#'='
 	BEQ	EX12
@@ -839,7 +838,11 @@ TM2	STX	XS
 RTN8	RTS
 *				;（第3レベル演算）
 EXPR	BSR	EX1
-	BSR	EX14		; 論理演算チェック
+	BSR	PKUP
+	BEQ	RTN8		; ':',行末なら終わり
+	CLRB
+	BSR	EX15		; 論理演算チェック
+;	BSR	EX14		; 論理演算チェック
 	TST B
 	BEQ	RTN8
 	PSH B
@@ -1810,32 +1813,32 @@ STATE	EQU	*-2
 	FDB	NEXT
 	FCB	'U','N','T','I','L'+Z
 	FDB	UNTIL
-	FCB	'G','O','T','O'+Z
-	FDB	GOTO
-	FCB	'G','O','S','U','B'+Z
-	FDB	GOSUB
-	FCB	'T','H','E','N'+Z
-	FDB	THEN
+	FCB	'I','F'+Z
+	FDB	IF
 	FCB	'F','O','R'+Z
 	FDB	FOR
 	FCB	'D','O'+Z
 	FDB	PSHX
-	FCB	'!'+Z		    ; GRAPHICステートメント
-	FDB	SETPT
+	FCB	'G','O','T','O'+Z
+	FDB	GOTO
+	FCB	'G','O','S','U','B'+Z
+	FDB	GOSUB
 	FCB	'R','E','T'+Z
 	FDB	PULX
-	FCB	'I','N','P','U','T'+Z
-	FDB	INPUT
-	FCB	'I','F'+Z
-	FDB	IF
 	FCB	'P','R','I','N','T'+Z
 	FDB	PRINT
+	FCB	'T','H','E','N'+Z
+	FDB	THEN
+	FCB	'!'+Z		    ; GRAPHICステートメント
+	FDB	SETPT
 	FCB	'C','L','R'+Z
     	FDB	CLR
 	FCB	'C','U','R','S'+Z
 	FDB	CURS
 	FCB	'N','E','G'+Z
 	FDB	NEGB
+	FCB	'I','N','P','U','T'+Z
+	FDB	INPUT
 	FCB	'R','E','S','T','O','R','E'+Z
 	FDB	RES
 	FCB	'R','E','M'+Z
@@ -1854,14 +1857,12 @@ STATE	EQU	*-2
 	FDB	ER9			; 　ERROR NO.9
 *
 FUNC	EQU	*-2
-	FCB	'R','N','D'+Z
-	FDB	RND
-	FCB	'R','E','A','D'+Z
-	FDB	READ
-	FCB	'A','B','S'+Z
-	FDB	ABS
 	FCB	'M','O','D'+Z
 	FDB	MOD
+	FCB	'R','N','D'+Z
+	FDB	RND
+	FCB	'A','B','S'+Z
+	FDB	ABS
 	FCB	'!','P','('+Z
 	FDB	PICKB
 	FCB	'U','S','E','R'+2
@@ -1878,6 +1879,8 @@ FUNC	EQU	*-2
 	FDB	KEY
 	FCB	'G','E','T','$'+Z
 	FDB	GET
+	FCB	'R','E','A','D'+Z
+	FDB	READ
 	FCB	$FF			; 一致する関数がなかったら
 	FDB	ERR7			; 　ERROR NO.7.
 *
