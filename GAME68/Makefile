@@ -1,7 +1,7 @@
 all: GAME68.srec
 
 %.bin: %.asm
-	a09 -oM00 -L -dORG=\$$B000 -dBASICROM=1 -dPRGBEG=\$$1000 -dDATETIME=`date +%s` $< 
+	a09 -oM00 -L -dBASICROM=0 -dPRGBEG=\$$1000 -dTXTBEG=\$$3A00 -dDATETIME=`date +%s` $< 
 
 %.srec: %.bin
 	~/bin/objcopy --adjust-vma 0xB000 -I binary $< -O srec $@
