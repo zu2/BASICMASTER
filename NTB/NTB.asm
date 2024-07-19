@@ -140,7 +140,7 @@ NMISEI	PSHA
 	PULA
 	RTS
 * 
-INEEE	TST	FLOD
+INEEE	LDAA	FLOD		; TSTより3cycle速い
 	BEQ	INEEE1
 	JMP	LHOOK
 INEEE1	LDA A	#'_'
@@ -452,22 +452,28 @@ END2	JMP	END1
 RUN	JSR	INITP
 	CLR	DIRECT
 	LDX	BOP
-	INX
+RN0	INX
 RN1	STX	EADRS		; TEXTの終わりまで行った。EADRS←行番号の位置
 	TST	DIRECT
 	BNE	END2
 	LDA A	0,X		; 　時 又はDIRECT MODEの時は終わる
 	BMI	END2
 RN12	INX			; 行番号スキップ
-	INX
-RN2	TST	isBREAK		; BREAK check
+RN13	INX
+RN2	LDAA	isBREAK		; BREAK check ; TSTは6cycle, LDAAは3cycle
 	BEQ	RN21
 	JMP	BREAK
 RN21	JSR	CHVAR		; 変数チェック
-	BCS	RN31
+	BCS	RN31		; C=1はステートメント
 RN3	JSR	LET		; 代入文処理
-	JSR	PKUP
-	BEQ	RN6
+	DEX
+RN300	INX
+	LDAA	0,X
+	BEQ	RN0		; 行末
+	CMPA	#' '
+	BEQ	RN300
+	CMPA	#':'
+	BEQ	RN13
 ERR18	LDA B	#18
 	FCB	$8C
 ERR19	LDA B	#19
@@ -476,11 +482,18 @@ ERR19	LDA B	#19
 RN31	LDX	#STATE		; ステートメント処理
 RN4	LDS	#STACK
 	JSR	TBLJP
-RN5	JSR	PKUP
-	BNE	RN2		; ERR19ではダメ？
-RN6	INX
-	BCC	RN1		; 行末 00
-	BRA	RN2		; ':' マルチステートメント
+RN5	DEX
+RN51	INX
+	LDAA	0,X
+	BEQ	RN0
+	CMPA	#':'
+	BEQ	RN13
+	CMPA	#' '
+	BEQ	RN51
+	BRA	RN2
+;	TST A			; 区切り $00 Z=1 C=0
+;	BEQ	RTN6		; 区切り ':' Z=1 C=1
+;	CMP A	#':'		; 他         Z=0 C=1
 *				; 16進入力処理
 HB1	ROL A
 	ASL A
@@ -507,9 +520,9 @@ TSTHEX	JSR	TSTN		; 16進チェック
 RTN2	RTS
 *
 CPBA	CMP B	0,X		; 2バイト比較
-	BNE	CPBAE		; 　行末→               Z=1 C=0
-	CMP A	1,X		; 　マルチステートメント Z=1 C=1
-CPBAE	RTS			; 　代                   Z=0 C=1
+	BNE	CPBAE
+	CMP A	1,X
+CPBAE	RTS
 *
 TSF	STX	XS
 	LDX	#FRNEXT		; (TABLE SERCH)
@@ -517,17 +530,17 @@ TBLSCH	STS	SPS		; 　SP←TEXT, IX←TABLE
 	JSR	NMISEI
 TS1	LDS	XS
 	DES
-	INX
+	INX			; 飛び先アドレス分読み飛ばし
 TS2	INX
 	PUL A
 	TAB
 	SUB B	0,X
 	ASL B
 	BEQ	TS3		; if １文字等しい
-TS21	LDA B	0,X		; 省略形処理
+TS21	LDA B	0,X		; 等しくないのでテーブルを読み飛ばす
 	INX
 FB	BPL	TS21
-	CMP A	#'.'
+	CMP A	#'.'		; 省略形だった？
 	BEQ	TS4
 	COM B
 	BNE	TS1		; if TABLE末でないなら
@@ -655,7 +668,7 @@ ADD	ADD A	1,X
 RTN4	RTS
 *
 SETCT	LDA A	#16
-	STA A		LPCT
+	STA A	LPCT
 	CLR A
 	CLR B
 	RTS
@@ -1009,7 +1022,8 @@ CUL4	LDA A	0,X
 TBAX	STX	XS		; IX←BA
 	STA A	WKC+1
 	STA B	WKC
-	BRA	CPS4
+	LDX	WKC
+	RTS
 *				;"MOD"
 MOD	JSR	SUB5		; "(" ?
 	BEQ	MOD1
