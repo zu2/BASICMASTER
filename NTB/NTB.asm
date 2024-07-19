@@ -73,16 +73,9 @@ WKC	RMB	2
 XS	RMB	2
 SPS	RMB	2
 MDS	RMB	2		; MOD SAVE
-FS	RMB	1		; SAVE FLAG
 ADP	RMB	4		; + ADRS設定WORK
 RNDS	RMB	2		; 乱数レジスタ
-FLOD	RMB	1		; LOAD FLAG
-FAUT	RMB	1		; AUTO FLAG
 LPCT	RMB	1		; LOOP COUNTER
-CHCT	RMB	1		; 出力文字数レジスタ
-WKUSE	RMB	2		; USING FLAG + WORK
-*
-	RMB	2
 *
 LNB	RMB	2		; 行番号レジスタ
 EOB	RMB	2		; 入力バッファ末ADRS
@@ -97,6 +90,11 @@ VTOP	RMB	(26+1)*2	; 変数エリア dummy,'A'〜'Z'
 BOP	RMB	2		; システム変数 '['
 EOP	RMB	2		; '\'
 MEMEND	RMB	2		; ']'
+CHCT	RMB	1		; 出力文字数レジスタ
+WKUSE	RMB	4		; USING FLAG + WORK
+FS	RMB	1		; SAVE FLAG
+FLOD	RMB	1		; LOAD FLAG
+FAUT	RMB	1		; AUTO FLAG
 XSPWK	RMB	2		; PSHX/PULX work
 LSWK	RMB	2		; LOAD/SAVE IX save area
 LSWK2	RMB	2		; LOAD/SAVE IX save area2
@@ -731,21 +729,25 @@ NEGX1	COM	0,X
 RTN5	RTS
 *
 CHV0	INX
-;CHVAR	BSR	PKUP		; 変数チェック
-CHVAR	LDA	0,X
-	CMPA	#' '
-	BEQ	CHV0
-	STX	XS
-	BSR	CHASC
-	BCS	CHV3
-	CMP A	#'!'
+CHVAR	LDA	0,X		; 変数チェック
+	CMPA	#' '		; C=1 ! . * 
+	BEQ	CHV0		; C=1 [A-Z]\.	1文字の省略形
+	STX	XS		; C=0 other
+	CMPA	#'A'
+	BCC	CHV21
+	CMP A	#'!'		; !W,!Rなどは予約語の表引きが必要
 	BEQ	TBL	
-	CMP A	#'.'
+	IF	0
+	CMP A	#'.'		; ??
 	BEQ	TBL
-	CMP A	#'*'
+	ENDIF
+	CMP A	#'*'		; コメント
 	BEQ	TBL
-CHV1	CLC
-CHV2	RTS
+CHV1	CLC			; ここCLCでいいのだろうか
+	RTS
+CHV21	CMPA	#'Z'+1
+	BCS	CHV3
+	RTS
 CHV3	LDA A	1,X
 	CMP A	#'.'
 	BEQ	TBL
@@ -769,7 +771,10 @@ PKUP	LDA A	0,X		; スペース読み飛ばす
 TBL	SEC
 RTN6	RTS
 *				;[第2レベル演算]
-EX1	BSR	PKUP
+EX0	INX
+EX1	LDAA	0,X
+	CMPA	#' '
+	BEQ	EX0
 	CMP A	#'-'
 	BNE	EX2
 	BSR	EX7		; マイナス処理
@@ -809,22 +814,30 @@ ABS	JSR	CUL1		; "ABS"
 	LDX	XS
 	RTS
 *
-EX11	ORAB	#1		; 比較論理演算
-	FCB	$8C		; 　チェック
+*   比較論理演算チェック
+*   結果AccB
+*   >	0000 0001
+*   =	0000 0010
+*   <	0000 0100
+*   >=	0000 0011
+*   <=	0000 0110
+*   <>	0000 0101
+*
+EX11	ORAB	#1
+	FCB	$8C
 EX12	ORAB	#2
-	FCB	$8C		; 結果AccB
-EX13	ORAB	#4		; >  0000 0001
-	INX			; =  0000 0010
-	FCB	$C1		; <  0000 0100
-EX14	CLR B			; >= 0000 0011
-	BSR	PKUP		; <= 0000 0110
-EX15	CMP A	#'>'		; <> 0000 0101
+	FCB	$8C
+EX13	ORAB	#4
+	INX
+EX141	LDAA	0,X
+	CMPA	#' '
+	BEQ	EX141
+EX15	CMP A	#'>'
 	BEQ	EX11
 	CMP A	#'='
 	BEQ	EX12
 	CMP A	#'<'
 	BEQ	EX13
-;	CLR A
 	RTS
 *
 TM1	BSR	TERM
