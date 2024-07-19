@@ -14,16 +14,14 @@
 ;STACK1	EQU	$FF
 	ORG	$E0
 SP2	RMB	2
-W42	RMB	2
+W5A	RMB	2
 W66	RMB	2
 W68	RMB	2
 W6A	RMB	2
-W6C	RMB	2
-W6E	RMB	2
 W70	RMB	2
 W72	RMB	2
-W74	RMB	2
 W76	RMB	2
+ADRVWK	RMB	2		; 変数アドレス変換用
 ;
 ;SP2	RMB	2
 ;	ORG	$0072
@@ -35,7 +33,7 @@ VARTOP	RMB	2	    ; @
 W3C	RMB	2	    ; \
 	RMB	2	    ; ]
 	RMB	2	    ; ^
-oW42	RMB	2	    ; _
+W42	RMB	2	    ; _
 	RMB	2	    ; ' '
 W46	RMB	2	    ; !
 	RMB	2	    ; "
@@ -50,7 +48,7 @@ RND	EQU	W52
 	RMB	2	    ; )
 W58	RMB	2	    ; *
 PGL	EQU	W58
-W5A	RMB	2	    ; +
+oW5A	RMB	2	    ; +
 	RMB	2	    ; ,
 	RMB	2	    ; -
 	RMB	2	    ; .
@@ -59,11 +57,11 @@ W64	RMB	2	    ; 0
 oW66	RMB	2	    ; 1
 oW68	RMB	2	    ; 2
 oW6A	RMB	2	    ; 3
-oW6C	RMB	2	    ; 4
-oW6E	RMB	2	    ; 5
+W6C	RMB	2	    ; 4
+W6E	RMB	2	    ; 5
 oW70	RMB	2	    ; 6
 oW72	RMB	2	    ; 7
-oW74	RMB	2	    ; 8
+W74	RMB	2	    ; 8
 oW76	RMB	2	    ; 9
 	RMB	2	    ; :
 	RMB	2	    ; ;
@@ -79,7 +77,6 @@ FSAVE	RMB	1
 LSWK	RMB	2		; LOAD/SAVE IX save area
 LSWK2	RMB	2		; LOAD/SAVE IX save area2
 LSWK3	RMB	2		; LOAD/SAVE IX save area3
-ADRVWK	RMB	2		; 変数アドレス変換用
 STACK2	EQU	$04FF
 LINBUF	EQU	$0500
 LBUFSIZ	EQU	255-1
