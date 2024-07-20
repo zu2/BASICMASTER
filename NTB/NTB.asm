@@ -438,7 +438,7 @@ SUBIF	JSR	CLCPL		; IF,UNTILの
 SUBIF0	RTS
 *				;"IF"
 IF	BSR		SUBIF
-	BEQ		REM
+	BEQ		REM	;次の行へ
 	BRA		RN2
 *
 SIZE	LDA A	MEMEND+1	; 残りメモリー計算
@@ -750,13 +750,11 @@ CHVAR	LDA	0,X		; 変数チェック
 	BCC	CHV21
 	CMP A	#'!'		; !W,!Rなどは予約語の表引きが必要
 	BEQ	TBL	
-	IF	0
-	CMP A	#'.'		; ??
-	BEQ	TBL
-	ENDIF
+;	CMP A	#'.'		; ?? 未使用??
+;	BEQ	TBL
 	CMP A	#'*'		; コメント
 	BEQ	TBL
-CHV1	CLC			; ここCLCでいいのだろうか
+CHV1	CLC
 	RTS
 CHV21	CMPA	#'Z'+1
 	BCS	CHV3
@@ -764,22 +762,18 @@ CHV21	CMPA	#'Z'+1
 CHV3	LDA A	1,X
 	CMP A	#'.'
 	BEQ	TBL
-;	BSR	CHASC
-;	BCC	CHV1
-;	RTS
 *
-CHASC	CMP A	#'A'		; ASCII CHECK
-	BCS	CHV1		; 'A'〜'Z' →C=1
-	CMP A	#'Z'+1		; 他       →C=0
-	RTS
+;CHASC	CMP A	#'A'		; ASCII CHECK
+;	BCS	CHV1		; 'A'〜'Z' →C=1
+;	CMP A	#'Z'+1		; 他       →C=0
+;	RTS
 *
 *				;(PICKUP)
 ICPKUP	INX
 PKUP	LDA A	0,X		; スペース読み飛ばす
+	BEQ	RTN6
 	CMP A	#' '
 	BEQ	ICPKUP		; 区切りチェック
-	TST A			; 区切り $00 Z=1 C=0
-	BEQ	RTN6		; 区切り ':' Z=1 C=1
 	CMP A	#':'		; 他         Z=0 C=1
 TBL	SEC
 RTN6	RTS
