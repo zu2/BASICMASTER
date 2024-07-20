@@ -403,7 +403,7 @@ DIRCT	JSR	CHVAR
 *
 NXTL1	INX			; 次の行を探す
 NXTL2	INX
-REM	TST	0,X
+	TST	0,X
 	BNE	NXTL2
 	RTS
 *				;（行番号捜す）
@@ -438,8 +438,8 @@ SUBIF	JSR	CLCPL		; IF,UNTILの
 SUBIF0	RTS
 *				;"IF"
 IF	BSR		SUBIF
-	BEQ		REM	;次の行へ
-	BRA		RN2
+	BNE		RN2
+	JMP		REM	;次の行へ
 *
 SIZE	LDA A	MEMEND+1	; 残りメモリー計算
 	LDA B	MEMEND
@@ -1779,6 +1779,11 @@ UNTIL	JSR	SUBIF		    ; 条件式の値
 *
 UNT	LDX	XSP		    ; 不成立なら
 	LDX	2,X		    ; 　IXSTACKの内容を取りだし、そのADRSへ
+	RTS
+*
+REM1	INX
+REM	LDAA	0,X
+	BNE	REM1
 	RTS
 *				    ;SAUE, LIST. 解除
 ;CNT	FCB	3,$13,$14,0	    ; 　のためのCONTROL CORD
