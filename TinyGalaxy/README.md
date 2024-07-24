@@ -26,6 +26,8 @@ BMUG会報 BASIC MASTER USER'S GROUP No.5 MAY 1982 に投稿したもの
 
 ![Tiny Galaxy](./TinyGalaxy.screenshot-1.png "Tiny Galaxy")
 
+![https://youtu.be/KdbBoB6mH_c?si=1DN88xjlF4UmojeX](https://youtu.be/KdbBoB6mH_c?si=1DN88xjlF4UmojeX)
+
 ### 資料
 
 ![Tiny Galaxy](./TinyGalaxy.BMUG198205.pdf "Tiny Galaxy")
