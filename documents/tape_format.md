@@ -3,7 +3,7 @@
 ## 物理フォーマット
 
 - カンサスシティスタンダード形式（300bps）
-	- https://en.wikipedia.org/wiki/Kansas\_City\_standard
+	- https://en.wikipedia.org/wiki/Kansas_City_standard
 - BASICMASTER Jr で1200bps ROMが追加された
 - 有志による1200bpsルーチンが複数存在する。Jr版との互換性はない（と思う）
 - 1200bpsは、いわゆる一波カンサス形式
@@ -98,10 +98,12 @@ KUMA  .S
 
 ### 1200bps BMUG
 
-|用途					|バイト数|
-|-----------------------|-------|
-|$003B-$004Cをベタ書き	|18|
-|($3B,$3C)-($3D,$3F)	|n|
+|用途						|バイト数|
+|---------------------------|-------|
+|bit 1の連続				|256|
+|$003B-$004Cの内容をベタ書き|18|
+|($3B,$3C)-($3D,$3F)		|n|
+|bit 1の連続				|48|
 
 ## BASICのSAVE
 
