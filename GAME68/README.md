@@ -45,8 +45,14 @@ A!B				XOR
 
 モニタ、音楽
 
+GAME-MBは [=0 で専用のモニタ（GAME-MB MONITOR)に移動し、SAVE/LOAD/Verifyが行えるが、本移植では標準モニタに移動するだけである。
+
+GAME-MBのモニタは、S/L/Vの他、Tranfer/Printが行える（#もPに同じ）。
+
+MUSICはGAME-MBでは最後に % が必要。本移植ではあってもなくても良い。
+
 ```
-[=0			モニタに移動
+[=0			標準モニタに移動
 [=1	STR		MUSIC
 ```
 
