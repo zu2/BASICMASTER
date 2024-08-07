@@ -25,7 +25,7 @@ SAVE/LOAD/APPENDの仕様は変更するかも。
 [L FILENAME		LOAD
 [A FILENAME		APPEND
 ```
-以下、GAME/BMに合わせた
+以下、GAME-MBに合わせた
 
 論理演算
 ```
