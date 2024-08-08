@@ -89,6 +89,9 @@ Node	*node_opt(Node	*old)
 		if(isNUM(node->lhs) && isNUM(node->rhs)){
 			return new_node_num(node->lhs->val + node->rhs->val);
 		}
+		if(isSameVAR(node->lhs,node->rhs)){							// A+A
+			return new_ASLD(node->lhs,1);
+		}
 		/* 左辺が定数または変数で、右辺がそれ以外なら入れ替える */
 		if(isNUMorVAR(node->lhs) && !isNUMorVAR(node->rhs)){
 			node = new_copy_node(old);
