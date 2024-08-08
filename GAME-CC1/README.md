@@ -1,8 +1,10 @@
-# GAME68 Corss Compiler
+# GAME68 Cross Compiler
 
 by ZUKERAN, shin  (@zu2, TEW SOFT)
 
 GAME言語のコンパイラの習作です。MC6800のアセンブリ言語に落とします。
+MacOSで作成しましたが、特別なルーチンは使っていないのでLinuxでも動くはず。
+
 作成期間2週間(2024/7/24-8/8)
 
 ## コンパイル方法
