@@ -51,6 +51,7 @@ typedef	enum	{
 	TK_MUSIC,		//
 	TK_MOD,			//
 	TK_REM,			//
+	TK_ASM,			// assembler extension
 } TokenKind;
 typedef	struct	Token	Token;
 
@@ -136,6 +137,7 @@ typedef enum {
 	ND_DECVAR,
 	ND_INC2VAR,
 	ND_DEC2VAR,
+	ND_ASM,
 } NodeKind;
 
 typedef struct Node Node;

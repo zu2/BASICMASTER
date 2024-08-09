@@ -227,6 +227,11 @@ void	ADD_V(char *v)
 		printf("\tADDB\t_%s+1\n",	v);
 		printf("\tADCA\t_%s\n",		v);
 }
+void	ADD_L(char *str)
+{
+		printf("\tADDB\t%s+1\n", str);
+		printf("\tADCA\t%s\n", str);
+}
 void	ADD_X(int v)
 {
 		printf("\tADDB\t%d,X\n", v+1);
@@ -427,6 +432,47 @@ void	SKIP2()
 		printf("\tFCB\t$8C		; SKIP 2byte\n");
 }
 
+//		LEAX	D,X
+void	ADX()
+{
+#if		1
+		JSR("ADX");
+#else
+		STX_L("ADXWK");
+		ADD_L("ADXWK");
+		STD_L("ADXWK");
+		LDX_L("ADXWK");
+#endif
+}
+//		LEAX	D*2,X
+void	ADX2()
+{
+#if		1
+		JSR("ADX2");
+#else
+		STX_L("ADXWK");
+		ASLD();
+		ADD_L("ADXWK");
+		STD_L("ADXWK");
+#endif
+}
+//		TFR	D,X
+void	TDX()
+{
+#if		1
+		// 12cycle 6bytes (with DP)
+		STD_L("TDXWK");
+		LDX_L("TDXWK");
+#else
+		// 26cycle 7bytes
+		PSHB();
+		PSHA();
+		TSX();
+		LDX_X(0);
+		INS();
+		INS();
+#endif
+}
 
 void	gen_store_var(Node *node)
 {
@@ -762,13 +808,20 @@ void gen_expr(Node *node)
 				LDAB_X(offset);
 				CLRA();
 				return;
-			}else if(isNUM(node->lhs) && node->lhs->val<0 && node->lhs->val>=-3){
+			}else if(isNUM(node->lhs) && node->lhs->val<0 && node->lhs->val>=-4){
 				LDX_V(node->str);
 				if(node->lhs->val<0){ DEX(); }
 				if(node->lhs->val<-1){ DEX(); }
 				if(node->lhs->val<-2){ DEX(); }
 				if(node->lhs->val<-3){ DEX(); }
 				LDAB_X(0);
+				CLRA();
+				return;
+			}else if(isNUM(node->lhs) && node->lhs->val<0 && node->lhs->val>=-256){
+				printf("\tDEC\t_%s\n",node->str);
+				LDX_V(node->str);
+				printf("\tINC\t_%s\n",node->str);
+				LDAB_X(256+(node->lhs->val));
 				CLRA();
 				return;
 			}
@@ -779,12 +832,9 @@ void gen_expr(Node *node)
 			LDD_X(0);
 #else
 			ADD_V(node->str);			// 配列のアドレスはAccABにある
-			PSHD();						// 一度スタックに置いてから
-			TSX();
-			LDX_X(0);					// 左辺アドレスをXに
+			TDX();						// TFR D,X
 			LDAB_X(0);
 			CLRA();
-			INS2();
 #endif
 			return;
 	case ND_ARRAY2:
@@ -801,6 +851,12 @@ void gen_expr(Node *node)
 				if(node->lhs->val<-1){ DEX();DEX(); }
 				LDD_X(0);
 				return;
+			}else if(isNUM(node->lhs) && node->lhs->val<0 && node->lhs->val>=-127){
+				printf("\tDEC\t_%s\n",node->str);
+				LDX_V(node->str);
+				printf("\tINC\t_%s\n",node->str);
+				LDD_X(256+(node->lhs->val)*2);
+				return;
 			}
 			gen_expr(node->lhs);		// 添字の計算
 #if	0
@@ -810,11 +866,8 @@ void gen_expr(Node *node)
 #else
 			ASLD();
 			ADD_V(node->str);			// 変数アドレスをLVに
-			PSHD();
-			TSX();
-			LDX_X(0);
+			TDX();
 			LDD_X(0);
-			INS2();
 #endif
 			return;
 	// 数値
@@ -1072,21 +1125,26 @@ gen_stmt(Node *node)
 //			printf("; store to array1 %s:",node->lhs->str);print_nodes_ln(node);
 			Node	*sub = node->lhs->lhs;
 			Node	*rhs = node->rhs;
-			if(isNUM(sub) && sub->val>=-2 && sub->val<=255
+			if(isNUM(sub) && sub->val>=-256 && sub->val<=255
 			&& isNUM(rhs) && rhs->val ==0) {					// 添字が小さな定数& 0クリア
 				int		offset = (sub->val);
-				if(sub->val>=0){	// 127〜0 ならoffsetで対応
+				if(sub->val>=0){				// 127〜0 ならoffsetで対応
 					LDX_V(node->lhs->str);
 					CLR1_X(offset);
-				}else{				// -1,-2 はDEXする
+				}else if(sub->val>=-2)	{		// -1,-2 はDEXする
 					LDX_V(node->lhs->str);
 					if(offset<0){ DEX();DEX(); }
 					if(offset<-1){ DEX();DEX(); }
 					CLR1_X(0);
+				}else{							// -256〜-5
+					printf("\tDEC\t_%s\n",node->lhs->str);
+					LDX_V(node->lhs->str);
+					printf("\tINC\t_%s\n",node->lhs->str);
+					CLR_X(256+(sub->val));
 				}
 				return;
 			}
-			if(isNUM(sub) && sub->val>=-4 && sub->val<=255){	// 添字が小さな定数
+			if(isNUM(sub) && sub->val>=-256 && sub->val<=255){	// 添字が小さな定数
 				int		offset = (sub->val);
 				if(isNUM(rhs)){
 					LDAB_I(rhs->val);
@@ -1098,52 +1156,65 @@ gen_stmt(Node *node)
 				if(sub->val>=0){	// 255〜0 ならoffsetで対応
 					LDX_V(node->lhs->str);
 					STAB_X(offset);
-				}else{				// -1〜4 はDEXする
+				}else if(sub->val>=-4){	// -1〜-4 はDEXする
 					LDX_V(node->lhs->str);
 					if(offset<0) { DEX();}
 					if(offset<-1){ DEX();}
 					if(offset<-2){ DEX();}
 					if(offset<-3){ DEX();}
 					STAB_X(0);
+				}else{					// -256〜-5
+					printf("\tDEC\t_%s\n",node->lhs->str);
+					LDX_V(node->lhs->str);
+					printf("\tINC\t_%s\n",node->lhs->str);
+					STAB_X(256+(sub->val));
 				}
 				return;
 			}
 			gen_expr(node->lhs->lhs);			// calculate subscript
-			ADD_V(node->lhs->str);
-			PSHD();
-			if(isNUM(rhs) && (rhs->val==0)){
-				TSX();
-				LDX_X(0);
+			ADD_V(node->lhs->str);				// 左辺のアドレスはDにある
+			if(isNUM(rhs) && (rhs->val==0)){	// 右辺が0
+				TDX();		// TFR D,X
 				CLR1_X(0);
-				INS2();
+			}else if(isNUM(rhs) && (rhs->val>0 && rhs->val<=255)){	// 右辺は1byte定数
+				TDX();		// TFR D,X
+				LDAB_I(rhs->val);
+				STAB_X(0);
 			}else{
+				PSHD();
 				gen_expr(rhs);
 				TSX();
 				LDX_X(0);
+				INS();
+				INS();
 				STAB_X(0);
-				INS2();
 			}
+			break;
 		}else if(node->lhs->kind==ND_ARRAY2){
 			//  (ND_ASSIGN (ND_ARRAY2 str=N (ND_VAR str=I)) (ND_NUM 0))
-//			printf("; store to array2 %s:",node->lhs->str);print_nodes_ln(node);
+			printf("; store to array2 %s:",node->lhs->str);print_nodes_ln(node);
 			Node	*sub = node->lhs->lhs;
+			int		offset = (sub->val)*2;
 			Node	*rhs = node->rhs;
-			if(isNUM(sub) && sub->val>=-2 && sub->val<=127
+			if(isNUM(sub) && sub->val>=-127 && sub->val<=127
 			&& isNUM(rhs) && rhs->val ==0) {					// 添字が小さな定数& 0クリア
-				int offset = (node->lhs->val)*2;
-				if(sub->val>=0){	// 127〜0 ならoffsetで対応
+				if(sub->val>=0){				// 127〜0 ならoffsetで対応
 					LDX_V(node->lhs->str);
 					CLR_X(offset);
-				}else{				// -1,-2 はDEXする
+				}else if(sub->val>=-2){			// -1,-2 はDEXする
 					LDX_V(node->lhs->str);
 					if(offset<0){ DEX();DEX(); }
 					if(offset<-1){ DEX();DEX(); }
 					CLR_X(0);
+				}else{							// -127〜-3
+					printf("\tDEC\t_%s\n",node->lhs->str);
+					LDX_V(node->lhs->str);
+					printf("\tINC\t_%s\n",node->lhs->str);
+					CLR_X(256+offset);
 				}
 				return;
 			}
-			if(isNUM(sub) && sub->val>=-2 && sub->val<=127){	// 添字が小さな定数
-				int offset = (node->lhs->val)*2;
+			if(isNUM(sub) && sub->val>=-127 && sub->val<=127){	// 添字が小さな定数
 				if(isNUM(rhs)){
 					LDD_I(rhs->val);
 				}else if(isVAR(rhs)){
@@ -1151,33 +1222,39 @@ gen_stmt(Node *node)
 				}else{
 					gen_expr(rhs);
 				}
-				if(sub->val>=0){	// 127〜0 ならoffsetで対応
+				printf("; ND_ASSIGN ND_ARRAY2 sub->val=%d,offset=%d\n",sub->val,offset);
+				if(sub->val>=0){				// 127〜0 ならoffsetで対応
 					LDX_V(node->lhs->str);
 					STD_X(offset);
-				}else{				// -1,-2 はDEXする
+				}else if(sub->val>=-2){			// -1,-2 はDEXする
 					LDX_V(node->lhs->str);
-					if(offset<0){ DEX();DEX(); }
-					if(offset<-1){ DEX();DEX(); }
+					if(sub->val<0){ DEX();DEX(); }
+					if(sub->val<-1){ DEX();DEX(); }
 					STD_X(0);
+				}else{							// -127〜-3
+					printf("\tDEC\t_%s\n",node->lhs->str);
+					LDX_V(node->lhs->str);
+					printf("\tINC\t_%s\n",node->lhs->str);
+					STD_X(256+offset);
 				}
 				return;
 			}
 			gen_expr(node->lhs->lhs);			// calculate subscript
 			ASLD();
-			ADD_V(node->lhs->str);
-			PSHD();
+			ADD_V(node->lhs->str);				// 左辺のアドレスはDにある
 			if(isNUM(rhs) && (rhs->val==0)){
-				TSX();
-				LDX_X(0);
+				TDX();		// TFR D,X
 				CLR_X(0);
-				INS2();
 			}else{
+				PSHD();
 				gen_expr(rhs);
 				TSX();
 				LDX_X(0);
+				INS();
+				INS();
 				STD_X(0);
-				INS2();
 			}
+			break;
 		}else{
 			error("ASSIGN VAR error not var/array\n");
 		}

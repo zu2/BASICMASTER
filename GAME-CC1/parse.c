@@ -25,6 +25,7 @@ Keyword_t	Statement[] = {
 	{	TK_SETRAND,		"'=",		},
 	{	TK_SETTIMER,	"\\=",		},
 	{	TK_SETCURSOR,	"^=",		},
+	{	TK_ASM,			"#",		},
 	{	TK_NONE,		"",			}
 };
 Keyword_t	Ident[] = {
@@ -108,6 +109,7 @@ print_token(Token *token)
 	case TK_CURSOR:		printf("TK_CURSOR\n");break;
 	case TK_CURSORADRS:	printf("TK_CURSORADDR\n");break;
 	case TK_KEYBOARD:	printf("TK_KEYBOARD\n");break;
+	case TK_ASM:		printf("TK_ASM '%s'\n",token->str);break;
 	default:
 			printf(";unknown token kind %d\n",token->kind);
 			break;
@@ -238,6 +240,7 @@ print_nodes(Node *node)
 	case ND_DECVAR:		print_var_node("ND_DECVAR",node);break;
 	case ND_INC2VAR:	print_var_node("ND_INC2VAR",node);break;
 	case ND_DEC2VAR:	print_var_node("ND_DEC2VAR",node);break;
+	case ND_ASM:		printf("(ND_ASM str=\"%s\")",node->str);break;
 	default:
 			printf(";unknown node kind %d\n",node->kind);
 			break;
@@ -461,7 +464,11 @@ Token *tokenize()
 			if(*p!=' '){
 //				printf(";REM mark '%c' found. skip line\n",*p);
 				char	*rem = get_least_line(p);
-				cur = new_token(TK_REM, cur, rem,strlen(rem));
+				if(*p=='#')	{ // Assembler extension
+					cur = new_token(TK_ASM, cur, rem,strlen(rem));
+				}else{
+					cur = new_token(TK_REM, cur, rem,strlen(rem));
+				}
 //				printf(";tokenize TK_REM p='%s'\n",rem);
 				while(*p!='\n' && *p!='\r') { p++; }	// 行末まで読み飛ばす
 //				printf("; REM %s\n",rem);
