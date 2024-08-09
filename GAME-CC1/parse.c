@@ -465,7 +465,7 @@ Token *tokenize()
 //				printf(";REM mark '%c' found. skip line\n",*p);
 				char	*rem = get_least_line(p);
 				if(*p=='#')	{ // Assembler extension
-					cur = new_token(TK_ASM, cur, rem,strlen(rem));
+					cur = new_token(TK_ASM, cur, rem+1,strlen(rem+1));
 				}else{
 					cur = new_token(TK_REM, cur, rem,strlen(rem));
 				}
@@ -711,6 +711,10 @@ Node *new_node_string(NodeKind kind,char *str)
 Node *new_node_REM(char *str)
 {
 	return new_node_string(ND_REM,str);
+}
+Node *new_node_ASM(char *str)
+{
+	return new_node_string(ND_ASM,str);
 }
 
 Node *new_unary(NodeKind kind, Node *lhs)
@@ -1121,6 +1125,12 @@ Node	*stmt()
 	if(token->kind==TK_REM){
 //		printf("; TK_REM '%s'\n",token->str);
 		node = new_node_REM(token->str);
+		token=token->next;
+		return node;
+	}
+	if(token->kind==TK_ASM){
+//		printf("; TK_ASM '%s'\n",token->str);
+		node = new_node_ASM(token->str);
 		token=token->next;
 		return node;
 	}

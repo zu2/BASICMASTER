@@ -1116,6 +1116,17 @@ gen_stmt(Node *node)
 		LABEL(new_line_label(node->val));
 		current = node;
 		break;
+	case ND_ASM: {
+			char *p=node->str;
+			if(*p==' '){
+				printf("\t");
+				while(*p==' '){
+					p++;
+				}
+			}
+			printf("%s\n",p);
+		}
+		break;
 	case ND_ASSIGN:
 		if(node->lhs->kind==ND_VAR){
 			gen_expr(node->rhs);
