@@ -300,6 +300,14 @@ void	CLR1_X(int v)
 {
 		printf("\tCLR\t%d,X\n",v);
 }
+void	CMPA_I(int v)
+{
+		printf("\tCMPA\t#%d\n",v);
+}
+void	CMPB_I(int v)
+{
+		printf("\tCMPB\t#%d\n",v);
+}
 void	CMPA_X(int v)
 {
 		printf("\tCMPA\t%d,X\n",v);
@@ -307,6 +315,14 @@ void	CMPA_X(int v)
 void	CMPB_X(int v)
 {
 		printf("\tCMPB\t%d,X\n",v);
+}
+void	CMPA_V(char *str)
+{
+		printf("\tCMPA\t_%s\n",str);
+}
+void	CMPB_V(char *str)
+{
+		printf("\tCMPB\t_%s+1\n",str);
 }
 void	STD_V(char *str)
 {
@@ -485,7 +501,7 @@ void gen_expr(Node *node);
 //	if cc is true then AccAB=1 else AccAB=0
 //
 void
-gen_compare(Node *node,char *label)
+gen_compare(Node *node)
 {
 	// > (ND_VAR I) 10 )
 	if(node==NULL){
@@ -496,12 +512,13 @@ gen_compare(Node *node,char *label)
 	if(!isCompare(node)){
 		error("not compare");
 	}
-	printf("; gen_compare %s :",label);print_nodes_ln(node);
+;	printf("; gen_compare :");print_nodes_ln(node);
 	char	*if_false = new_label();
 	char	*if_true = new_label();
 	// 0との比較はサボれる場合がある
 	if(isNUM(node->rhs) && node->rhs->val==0
 	&& (node->kind==ND_GE || node->kind==ND_LT)){ // >=0 と <0 の場合は bit15(N flag)を見れば良い
+;		printf("; gen_compare expr/var >=,< NUM");print_nodes_ln(node);
 		if(isVAR(node->lhs)){
 			TST_V0(node->lhs->str);
 		}else{
@@ -520,6 +537,7 @@ gen_compare(Node *node,char *label)
 		CLRA();
 		return;
 	}else if(isNUMorVAR(node->lhs) && isNUMorVAR(node->rhs) && isEQorNE(node)){	// ==,!= はCPXで
+;		printf("; gen_compare expr ==,!= NUM");print_nodes_ln(node);
 		if(isNUM(node->lhs)){
 			LDX_I(node->lhs->val);
 		}else{
@@ -541,53 +559,139 @@ gen_compare(Node *node,char *label)
 		CLRB();
 		CLRA();
 		return;
+	}else if(isNUM(node->rhs)){					// 左辺は式、右辺は定数
+;		printf("; gen_compare expr ==,!= NUM");print_nodes_ln(node);
+		gen_expr(node->lhs);					// AccABに結果がある
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		case ND_EQ:	CMPB_I(low(node->rhs->val));
+					Bxx("NE",if_false);
+					CMPA_I(high(node->rhs->val));
+					Bxx("NE",if_false);
+					break;
+		case ND_NE:	CMPB_I(low(node->rhs->val));
+					Bxx("NE",if_true);
+					CMPA_I(high(node->rhs->val));
+					Bxx("EQ",if_false);
+					break;
+		case ND_GE:	SUB_I(node->rhs->val);
+					Bxx("LT",if_false);
+					break;
+		case ND_GT:	SUB_I(node->rhs->val);
+					Bxx("LT",if_false);
+					Bxx("NE",if_true);
+					TSTB();
+					Bxx("EQ",if_false);
+					break;
+		case ND_LE:	SUB_I(node->rhs->val);
+					Bxx("LT",if_true);
+					TSTB();
+					Bxx("NE",if_false);
+					break;
+		case ND_LT:	SUB_I(node->rhs->val);
+					Bxx("GE",if_false);
+					break;
+		default:
+					error("Bxx not known\n");
+		}
+		LABEL(if_true);
+		LDAB_I(1);
+		SKIP1();
+		LABEL(if_false);
+		CLRB();
+		CLRA();
+		return;
+	}else if(isVAR(node->rhs)){					// 左辺は式、右辺は変数
+;		printf("; gen_compare expr ?? VAR");print_nodes_ln(node);
+		gen_expr(node->lhs);					// AccABに結果がある
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		case ND_EQ:	CMPB_V(node->rhs->str);
+					Bxx("NE",if_false);
+					CMPA_V(node->rhs->str);
+					Bxx("NE",if_false);
+					break;
+		case ND_NE:	CMPB_V(node->rhs->str);
+					Bxx("NE",if_true);
+					CMPA_V(node->rhs->str);
+					Bxx("EQ",if_false);
+					break;
+		case ND_GE:	SUB_V(node->rhs->str);		// lhs >= rhs ?
+					Bxx("LT",if_false);			// lhs <  rhs -> false, then lhs>=rhs
+					break;
+		case ND_GT:	SUB_V(node->rhs->str);		// lhs > rhs ?
+					Bxx("LT",if_false);			// lhs < rhs -> false
+					Bxx("NE",if_true);			// lhs > rhs -> true
+					TSTB();
+					Bxx("EQ",if_false);			// lhs = rhs -> false
+					break;
+		case ND_LE:	SUB_V(node->rhs->str);		// lhs <= rhs?
+					Bxx("LT",if_true);			// lhs < rhs -> true, then lhs>=rhs
+					TSTB();
+					Bxx("NE",if_false);			// lhs != rhs -> false
+					break;
+		case ND_LT:	SUB_V(node->rhs->str);		// lhs > rhs?
+					Bxx("GE",if_false);			// lhs =< rhs -> false
+					break;
+		default:
+					error("Bxx not known\n");
+		}
+		LABEL(if_true);
+		LDAB_I(1);
+		SKIP1();
+		LABEL(if_false);
+		CLRB();
+		CLRA();
+		return;
+	}else{
+;		printf("; gen_compare expr ?? expr");print_nodes_ln(node);
+		gen_expr(node->lhs);
+		PSHD();
+		gen_expr(node->rhs);
+		TSX();
+		// 以下、AccAB(rhs)とStackTOP(lhs)を比較
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		case ND_EQ:	CMPB_X(1);
+					Bxx("NE",if_false);
+					CMPA_X(0);
+					Bxx("NE",if_false);
+					break;
+		case ND_NE:	CMPB_X(1);
+					Bxx("NE",if_true);
+					CMPA_X(0);
+					Bxx("EQ",if_false);
+					break;
+		case ND_LT:	SUB_X(0);
+					Bxx("LT",if_false);
+					Bxx("NE",if_true);
+					TSTB();
+					Bxx("EQ",if_false);
+					break;
+		case ND_LE:	SUB_X(0);
+					Bxx("LT",if_false);
+					break;
+		case ND_GT:	SUB_X(0);
+					Bxx("GE",if_false);
+					break;
+		case ND_GE:	SUB_X(0);
+					Bxx("GT",if_false);
+					Bxx("NE",if_true);
+					TSTB();
+					Bxx("NE",if_false);
+					break;
+		default:
+					error("Bxx not known\n");
+		}
+		LABEL(if_true);
+		LDAB_I(1);
+		SKIP1();
+		LABEL(if_false);
+		CLRB();
+		CLRA();
+		INS2();
+		return;
 	}
-	gen_expr(node->lhs);
-	PSHD();
-	gen_expr(node->rhs);
-	TSX();
-	// 以下、AccAB(rhs)とStackTOP(lhs)を比較
-	switch(node->kind){ // if cc then jump to label otherwise jump to if_false
-	case ND_EQ:	CMPB_X(1);
-				Bxx("NE",if_false);
-				CMPA_X(0);
-				Bxx("NE",if_false);
-				break;
-	case ND_NE:	CMPB_X(1);
-				Bxx("NE",if_true);
-				CMPA_X(0);
-				Bxx("EQ",if_false);
-				break;
-	case ND_LT:	SUB_X(0);
-				Bxx("LT",if_false);
-				Bxx("NE",if_true);
-				TSTB();
-				Bxx("EQ",if_false);
-				break;
-	case ND_LE:	SUB_X(0);
-				Bxx("LT",if_false);
-				break;
-	case ND_GT:	SUB_X(0);
-				Bxx("GE",if_false);
-				break;
-	case ND_GE:	SUB_X(0);
-				Bxx("GT",if_false);
-				Bxx("NE",if_true);
-				TSTB();
-				Bxx("NE",if_false);
-				break;
-	default:
-				error("Bxx not known\n");
-	}
-	LABEL(if_true);
-	LDAB_I(1);
-	SKIP1();
-	LABEL(if_false);
-	CLRB();
-	CLRA();
-	INS2();
-	return;
+	error("unknow condition\n");
 }
+#if	0
 //
 //	if cc is true, branch to label
 //
@@ -642,55 +746,59 @@ gen_branch_if_true(Node *node,char *label)
 		JMP(label);
 		LABEL(if_false);
 		return;
+	}else{
+		gen_expr(node->lhs);
+		PSHD();
+		gen_expr(node->rhs);
+		TSX();
+		// 以下、AccAB(rhs)とStackTOP(lhs)を比較
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		case ND_EQ:	CMPB_X(1);
+					Bxx("NE",if_false);
+					CMPA_X(0);
+					Bxx("NE",if_false);
+					break;
+		case ND_NE:	CMPB_X(1);
+					Bxx("NE",if_true);
+					CMPA_X(0);
+					Bxx("EQ",if_false);
+					break;
+		case ND_LT:	SUB_X(0);
+					Bxx("LT",if_false);
+					Bxx("NE",if_true);
+					TSTB();
+					Bxx("EQ",if_false);
+					break;
+		case ND_LE:	SUB_X(0);
+					Bxx("LT",if_false);
+					break;
+		case ND_GT:	SUB_X(0);
+					Bxx("GE",if_false);
+					break;
+		case ND_GE:	SUB_X(0);
+					Bxx("GT",if_false);
+					Bxx("NE",if_true);
+					TSTB();
+					Bxx("NE",if_false);
+					break;
+		default:
+					error("Bxx not known\n");
+		}
+		LABEL(if_true);
+		INS2();
+		JMP(label);
+		LABEL(if_false);
+		INS2();
+		return;
 	}
-	gen_expr(node->lhs);
-	PSHD();
-	gen_expr(node->rhs);
-	TSX();
-	// 以下、AccAB(rhs)とStackTOP(lhs)を比較
-	switch(node->kind){ // if cc then jump to label otherwise jump to if_false
-	case ND_EQ:	CMPB_X(1);
-				Bxx("NE",if_false);
-				CMPA_X(0);
-				Bxx("NE",if_false);
-				break;
-	case ND_NE:	CMPB_X(1);
-				Bxx("NE",if_true);
-				CMPA_X(0);
-				Bxx("EQ",if_false);
-				break;
-	case ND_LT:	SUB_X(0);
-				Bxx("LT",if_false);
-				Bxx("NE",if_true);
-				TSTB();
-				Bxx("EQ",if_false);
-				break;
-	case ND_LE:	SUB_X(0);
-				Bxx("LT",if_false);
-				break;
-	case ND_GT:	SUB_X(0);
-				Bxx("GE",if_false);
-				break;
-	case ND_GE:	SUB_X(0);
-				Bxx("GT",if_false);
-				Bxx("NE",if_true);
-				TSTB();
-				Bxx("NE",if_false);
-				break;
-	default:
-				error("Bxx not known\n");
-	}
-	LABEL(if_true);
-	INS2();
-	JMP(label);
-	LABEL(if_false);
-	INS2();
-	return;
+	error("unknown condifion if_branch_false\n");
 }
+#endif
 
 void
 gen_branch_if_false(Node *node,char *label)
 {
+	printf("; gen_branch_if_false start\n");
 	// > (ND_VAR I) 10 )
 	if(node==NULL){
 		printf(";branch_if_false node==NULL !\n");
@@ -736,53 +844,129 @@ gen_branch_if_false(Node *node,char *label)
 		}else{
 			Bxx("NE",if_true);
 		}
+		LABEL(if_false);
 		JMP(label);
 		LABEL(if_true);
 		return;
+	}else if(isNUM(node->rhs)){					// 左辺は式、右辺は定数
+		gen_expr(node->lhs);					// AccABに結果がある
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		case ND_EQ:	CMPB_I(low(node->rhs->val));
+					Bxx("NE",if_false);
+					CMPA_I(high(node->rhs->val));
+					Bxx("EQ",if_true);
+					break;
+		case ND_NE:	CMPB_I(low(node->rhs->val));
+					Bxx("NE",if_true);
+					CMPA_I(high(node->rhs->val));
+					Bxx("NE",if_true);
+					break;
+		case ND_GE:	SUB_I(node->rhs->val);
+					Bxx("LT",if_false);
+					break;
+		case ND_GT:	SUB_I(node->rhs->val);
+					Bxx("LT",if_false);
+					Bxx("NE",if_true);
+					TSTB();
+					Bxx("NE",if_false);
+					break;
+		case ND_LE:	SUB_I(node->rhs->val);
+					Bxx("LT",if_true);
+					TSTB();
+					Bxx("EQ",if_true);
+					break;
+		case ND_LT:	SUB_I(node->rhs->val);
+					Bxx("LT",if_true);
+					break;
+		default:
+					error("Bxx not known\n");
+		}
+		LABEL(if_false);
+		JMP(label);
+		LABEL(if_true);
+		return;
+	}else if(isVAR(node->rhs)){					// 左辺は式、右辺は変数
+		gen_expr(node->lhs);					// AccABに結果がある
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		case ND_EQ:	CMPB_V(node->rhs->str);
+					Bxx("NE",if_false);
+					CMPA_V(node->rhs->str);
+					Bxx("EQ",if_true);
+					break;
+		case ND_NE:	CMPB_V(node->rhs->str);
+					Bxx("NE",if_true);
+					CMPA_V(node->rhs->str);
+					Bxx("NE",if_true);
+					break;
+		case ND_GE:	SUB_V(node->rhs->str);
+					Bxx("GE",if_true);
+					break;
+		case ND_GT:	SUB_V(node->rhs->str);
+					Bxx("LT",if_false);
+					Bxx("NE",if_true);
+					TSTB();
+					Bxx("NE",if_true);
+					break;
+		case ND_LE:	SUB_V(node->rhs->str);
+					Bxx("LT",if_true);
+					TSTB();
+					Bxx("EQ",if_true);
+					break;
+		case ND_LT:	SUB_V(node->rhs->str);
+					Bxx("LT",if_true);
+					break;
+		default:
+					error("Bxx not known\n");
+		}
+		LABEL(if_false);
+		JMP(label);
+		LABEL(if_true);
+		return;
+	}else{
+		gen_expr(node->lhs);
+		PSHD();
+		gen_expr(node->rhs);
+		TSX();
+		// 以下、AccAB(rhs)とStackTOP(lhs)を比較
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		case ND_EQ:	CMPB_X(1);
+					Bxx("NE",if_false);
+					CMPA_X(0);
+					Bxx("EQ",if_true);
+					break;
+		case ND_NE:	CMPB_X(1);
+					Bxx("NE",if_true);
+					CMPA_X(0);
+					Bxx("NE",if_true);
+					break;
+		case ND_LT:	SUB_X(0);
+					Bxx("LT",if_false);
+					Bxx("NE",if_true);
+					TSTB();
+					Bxx("NE",if_true);
+					break;
+		case ND_LE:	SUB_X(0);
+					Bxx("GE",if_true);
+					break;
+		case ND_GT:	SUB_X(0);
+					Bxx("LT",if_true);
+					break;
+		case ND_GE:	SUB_X(0);
+					Bxx("GT",if_false);
+					Bxx("NE",if_true);
+					TSTB();
+					Bxx("EQ",if_true);
+					break;
+		default:
+					error("Bxx not known\n");
+		}
+		LABEL(if_false);
+		INS2();
+		JMP(label);
+		LABEL(if_true);
+		INS2();
+		return;
 	}
-	gen_expr(node->lhs);
-	PSHD();
-	gen_expr(node->rhs);
-	TSX();
-	// 以下、AccAB(rhs)とStackTOP(lhs)を比較
-	switch(node->kind){ // if cc then jump to label otherwise jump to if_false
-	case ND_EQ:	CMPB_X(1);
-				Bxx("NE",if_false);
-				CMPA_X(0);
-				Bxx("EQ",if_true);
-				break;
-	case ND_NE:	CMPB_X(1);
-				Bxx("NE",if_true);
-				CMPA_X(0);
-				Bxx("NE",if_true);
-				break;
-	case ND_LT:	SUB_X(0);
-				Bxx("GT",if_true);
-				Bxx("NE",if_false);
-				TSTB();
-				Bxx("NE",if_true);
-				break;
-	case ND_LE:	SUB_X(0);
-				Bxx("GE",if_true);
-				break;
-	case ND_GT:	SUB_X(0);
-				Bxx("LT",if_true);
-				break;
-	case ND_GE:	SUB_X(0);
-				Bxx("LT",if_true);
-				Bxx("NE",if_false);
-				TSTB();
-				Bxx("EQ",if_true);
-				break;
-	default:
-				error("Bxx not known\n");
-	}
-	LABEL(if_false);
-	INS2();
-	JMP(label);
-	LABEL(if_true);
-	INS2();
-	return;
 }
 
 void gen_expr(Node *node)
@@ -1084,7 +1268,7 @@ void gen_expr(Node *node)
 	case ND_LE:{
 			printf("; ");print_nodes_ln(node);
 			char	*if_false = new_label();
-			gen_compare(node,if_false);
+			gen_compare(node);
 			}
 			break;
 	default:
@@ -1271,14 +1455,17 @@ gen_stmt(Node *node)
 		}
 		break;
 	case ND_IF: {
-//			printf("; ");print_nodes(node);printf("\n");
+			printf("; ");print_nodes(node);printf("\n");
 			char	*IF_TRUE	= new_label();
 			char	*NEXT_LINE	= new_line_label(current->rhs->val);
-			if(isVAR(node->lhs)){
+			if(isVAR(node->lhs)){							// if 変数 の場合
 				LDX_V(node->lhs->str);
 				printf("\tBNE\t%s\n",IF_TRUE);
 				printf("\tJMP\t%s\n",NEXT_LINE);
+				LABEL(IF_TRUE);
+				return;
 			}else if(isCompare(node->lhs)){
+				printf("; call gen_branch_if_false\n");
 				gen_branch_if_false(node->lhs,NEXT_LINE);
 				return;
 			}
