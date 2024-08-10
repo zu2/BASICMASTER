@@ -35,10 +35,11 @@ typedef	enum	{
 	TK_PRINTCH,		//
 	TK_STR,			//	20
 	TK_CALL,		//
+	TK_CALLVAL,		//
 	TK_UNTIL,		//
 	TK_DO,			//
 	TK_NEXT,		//
-	TK_FOR,			//	25
+	TK_FOR,			//
 	TK_SETRAND,		//
 	TK_INKEY,		//
 	TK_TIMER,		//
@@ -104,6 +105,7 @@ typedef enum {
 	ND_PRINTCH,
 	ND_PRINTSTR,
 	ND_CALL,
+	ND_CALLVAL,
 	ND_UNTIL,
 	ND_DO,
 	ND_NEXT,

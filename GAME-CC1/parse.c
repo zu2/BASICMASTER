@@ -549,7 +549,7 @@ Token *tokenize()
 			}
 			// "の後に行末やファイル末が来た or 空文字列
 //			printf(";tokenize NG TK_STR len=%ld,'%c'(%02x)\n",p-q,*p,*p);
-			error_at(p-1,"string \"...\" not terminated.\n");
+			error_at(p-1,"string \"...\" not terminated. '%s'\n",current_linetop);
 			continue;
 		}else if (*p=='+' || *p=='-' || *p=='*' || *p=='/') {
 //			printf(";tokenize TK_RESERVED '%c',p='%s'\n",*p,get_least_line(p));
