@@ -731,20 +731,44 @@ SUB	SUBB	1,X
 BO5	CMPA	#'*'
 	BNE	BO6
 	PULA
-MLTPLY	STAA	W68
-	STAB	W68+1
-	LDAB	#16
-	STAB	W66
-	CLRA
-	CLRB
-ML1	LSR	W68
-	ROR	W68+1
-	BCC	ML2
-	BSR	ADD
-ML2	ASL	1,X
-	ROL	0,X
-	DEC	W66
-	BNE	ML1
+*
+*	MULTIPLY	AB = (IX,IX+1)*AB
+*
+MLTPLY	STX	W6C
+	LDX	0,X		;   6
+	STX	W66		;   4
+	STAB	W68+1		;   4
+	STAA	W68		;   4
+	BEQ	MULTI02		;   4
+MULTI	LDX	#16             ;   3
+	CLRA			;   2
+	CLRB			;   2
+ML01    ASLB			;   2	loop 34cycle/loop
+	ROLA			;   2
+	ROL     W68+1		;   6
+	ROL     W68		;   6
+	BCC     ML02		;   4
+	ADDB	W66+1		;   3
+	ADCA	W66             ;   3
+ML02	DEX			;   4
+	BNE     ML01            ;   4
+	LDX	W6C
+	RTS
+*
+*	MULTIPLY	AB = B * (IX,IX+1)	when AccA==0
+*
+MULTI02	LDX	#8		;   3		before 3+2+2=7
+	CLRA			;   2
+	CLRB			;   2
+ML201	ASLB			;   2		loop 24cycle/loop -> 192cycle
+	ROLA			;   2
+	ROL     W68+1		;   6
+	BCC     ML202		;   4
+	ADDB	W66+1		;   3
+	ADCA	W66             ;   3
+ML202	DEX			;   4
+	BNE     ML201           ;   4
+	LDX	W6C
 	RTS
 BO6	JMP	BO8
 *
@@ -762,6 +786,15 @@ CTABLE	FDB	10000
 *** POSITIVE DIVISION ***
 *
 DIVPOS	CLR	W66
+	TST	0,X
+	BNE	DP1
+	PSHA
+	LDAA	1,X
+	STAA	0,X
+	CLR	1,X
+	LDAA	#8
+	STAA	W66
+	PULA
 DP1	INC	W66
 	ASL	1,X
 	ROL	0,X
@@ -772,7 +805,7 @@ DP1	INC	W66
 	CLR	W68+1
 DP2	BSR	SUB
 	BCC	DP3
-	BSR	ADD
+	JSR	ADD
 	CLC
 	FCB	$9C
 DP3	SEC
