@@ -424,6 +424,10 @@ void	JSR(char *to)
 {
 		printf("\tJSR\t%s\n",to);
 }
+void	JSR_X(int v)
+{
+		printf("\tJSR\t%d,X\n",v);
+}
 
 void
 Bxx(char *cc, char *label)
@@ -1066,6 +1070,9 @@ void gen_expr(Node *node)
 			gen_expr(node->lhs);
 			LDD_V("MOD");
 			return;
+	case ND_CALLVAL:
+			LDD_V("CALLVAL");
+			return;
 	case ND_ANDI:
 			gen_expr(node->lhs);
 			AND_I(node->val);
@@ -1581,6 +1588,25 @@ gen_stmt(Node *node)
 			STD_V("CURSOR");
 		}
 		return;
+	case ND_CALL: {
+			char	*buf=calloc(1,256);
+			if(isNUM(node->lhs)){
+				sprintf(buf,"$%04X",node->lhs->val);
+				JSR(buf);
+			}else if(isVAR(node->lhs)){
+				LDX_V(node->lhs->str);
+				JSR_X(0);
+			}else{
+				gen_expr(node->lhs);
+				PSHD();
+				TSX();
+				LDX_X(0);
+				JSR_X(0);
+				INS2();
+			}
+			STD_V("CALLRET");
+		}
+		return;
 	case ND_MUSIC:{
 		char	*label = new_label();
 		printf("; %s='%s'\n",label,node->str);fflush(stdout);
@@ -1680,6 +1706,7 @@ epilogue()
 	RMB("_X",2);
 	RMB("_Y",2);
 	RMB("_Z",2);
+	RMB("_CALLRET",2);
 	printf("_TIMER\tEQU\t$000A\n");
 	printf("_CURSOR\tEQU\t$000F\n");
 	for(int i=0; i<string_count; i++){

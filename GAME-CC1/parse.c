@@ -198,6 +198,7 @@ print_nodes(Node *node)
 	case ND_PRINTCH:	print_unary_node("ND_PRINTCH ",node);break;
 	case ND_PRINTSTR:	printf("(ND_PRINTSTR '%s')",node->str);break;
 	case ND_CALL:		printf("(ND_CALL)");break;
+	case ND_CALLVAL:	printf("(ND_CALLVAL)");break;	// 機械語から戻ったときのAccAB
 	case ND_UNTIL:		printf("(ND_UNTIL label=%d ",node->val);
 						print_nodes(node->lhs);printf(")");
 						break;
@@ -548,7 +549,7 @@ Token *tokenize()
 			}
 			// "の後に行末やファイル末が来た or 空文字列
 //			printf(";tokenize NG TK_STR len=%ld,'%c'(%02x)\n",p-q,*p,*p);
-			error("string \"...\" not terminated. '%s'\n",get_least_line(q-1));
+			error_at(p-1,"string \"...\" not terminated.\n");
 			continue;
 		}else if (*p=='+' || *p=='-' || *p=='*' || *p=='/') {
 //			printf(";tokenize TK_RESERVED '%c',p='%s'\n",*p,get_least_line(p));
@@ -876,6 +877,10 @@ Node *primary()
 		Node	*node = new_node(ND_TIMER);
 		node->str = "TIMER";
 		return	node;
+	}else if(consume_op(">")){		// CALL(>=)から戻ってきた時のAccABが入る
+		Node	*node = new_node(ND_CALLVAL);
+		node->str = "CALLVAL";
+		return	node;
 	}else if(consume_op("^$")){		// CURSOR ADRS
 		Node	*node = new_node(ND_CURSORADRS);
 		node->str = "CURSORADRS";
@@ -1156,6 +1161,11 @@ Node	*stmt()
 		token=token->next;
 		return	node;
 	}
+	if(consume_op(">=")) {		// 機械語CALL
+		node=new_unary(ND_CALL,expr());
+		node->str="CALL";
+		return	node;
+	}
 	// その他は代入のはず
 	return node = assign();
 }
@@ -1166,8 +1176,12 @@ void program()
 
 	current_linetop = user_input;
 //	printf(";progtam start\n");
+	int	linenumber = 0;
 	while(!at_eof()){
 //		printf(";line start\t");print_token(token);
+		if(token->kind==TK_LINENUM){
+			linenumber = token->val;
+		}
 		if(token->kind==TK_RESERVED){
 //			printf("; ?TK_RESERVED '%s'\n",token->str);
 		}
@@ -1179,6 +1193,7 @@ void program()
 			break;
 		}
 		if(token->kind!=TK_LINENUM){
+			printf("; error at line %d\n",linenumber);
 			printf("; token=");print_token(token);
 			error("no line number. kind=%d\n",token->kind);
 			exit(1);
