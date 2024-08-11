@@ -31,7 +31,16 @@ MacOSで作成しましたが、特別なルーチンは使っていないので
 - あると思うなエラーメッセージ
 - アセンブルしないとわからないエラーもあります。行番号の重複など。
 
-インタプリタとの速度比較動画
+## インタプリタとの速度比較動画
 
 [https://www.youtube.com/watch?v=G-P93oGVb98](https://www.youtube.com/watch?v=G-P93oGVb98)
 [https://www.youtube.com/watch?v=cs1DSGrmPYA](https://www.youtube.com/watch?v=cs1DSGrmPYA)
+
+## 参考文献
+
+- GAME68コンパイラ ASCII 1982年5月号 P.149 (エンサイクロペディア・アスキー第9巻 P.99)
+- [GAME68コンパイラ : 電子工作やってみたよ](https://telmic.exblog.jp/30174191/)
+- GAME ASCII 1978年7月号 P.66
+- GAME ASCII 1978年8月号 P.42
+- GAME ASCII 1978年9月号 P.68
+- GAME ASCII 1978年10月号 P.66
