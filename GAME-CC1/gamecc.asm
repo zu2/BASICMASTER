@@ -65,43 +65,92 @@ ADX2		STX		ADXWK
 			LDX		ADXWK
 			RTS
 			ENDIF
+			IF	0
 *
 *	MULTIPLY	AB = AB * (IX,IX+1)
 *
 MULTIPLY	STAB    W68+1
 			STAA    W68
 			BEQ		MULTI0
-			LDAB    #16
-			STAB    W66
+			LDAB	1,X
+			LDAA	0,X
+			STAB	W66+1
+			STAA	W66
+MULTI		LDX		#16
 			CLRA
 			CLRB
 ML1			LSR     W68
 			ROR     W68+1
 			BCC     ML2
-			ADDB    1,X
-			ADCA    0,X
-ML2			ASL     1,X
-			ROL     0,X
-			DEC     W66
+			ADDB    W66+1
+			ADCA    W66
+ML2			ASL     W66+1
+			ROL     W66
+			DEX
 			BNE     ML1
 			RTS
 *
 *	MULTIPLY	AB = B * (IX,IX+1)
 *	when AccA==0
 *
-MULTI0		LDAB    #8
-			STAB    W66
-			CLRA
+MULTI0		LDAB	1,X
+			STAB	W66+1
+			LDAB	0,X
+			STAB	W66
+			LDX		#8
 			CLRB
 ML01		LSR     W68+1
 			BCC     ML02
-			ADDB    1,X
-			ADCA    0,X
-ML02		ASL     1,X
-			ROL     0,X
-			DEC     W66
+			ADDB    W66+1
+			ADCA    W66
+ML02		ASL     W66+1
+			ROL     W66
+			DEX
 			BNE     ML01
 			RTS
+			ELSE
+*
+*	MULTIPLY	AB = (IX,IX+1)*AB
+*
+MULTIPLY	STX		TDXWK
+			LDX		0,X				;   6
+			STX		W66				;	4
+			STAB	W68+1			;	4
+			STAA	W68				;	4
+			BEQ		MULTI02			;	4
+MULTI		LDX		#16             ;   3
+			CLRA					;   2
+			CLRB					;   2           CPX #?
+			FCB		$8C				;	3			SKIP2
+ML01	    ASLB					;   2			loop 34cycle/loop
+			ROLA					;   2
+			ROL     W68+1			;   6
+			ROL     W68				;   6
+			BCC     ML02			;   4
+			ADDB	W66+1			;   3
+			ADCA	W66             ;   3
+ML02		DEX						;	4
+			BNE     ML01            ;   4
+			LDX		TDXWK
+			RTS
+*
+*	MULTIPLY	AB = B * (IX,IX+1)	when AccA==0
+*
+MULTI02		LDX		#8				;	3		before 3+2+2=7
+			CLRA					;	2
+			CLRB					;	2
+ML201	    ASLB					;	2		loop 24cycle/loop -> 192cycle
+			ROLA					;	2
+			ROL     W68+1			;	6
+			BCC     ML202			;	4
+			ADDB	W66+1			;	3
+			ADCA	W66             ;	3
+ML202		DEX						;	4
+			BNE     ML201           ;	4
+			LDX		TDXWK
+			RTS
+			ENDIF
+			IF	0
 *
 *	AB <= (SP+4,SP+5)/(SP+2,SP+3)
 *
@@ -141,7 +190,7 @@ NEGAB		NEGA
 			SBCA	#0
 NEGE		RTS
 *
-*	DIVIDE Positive AB = AB/(X,X+1), no MODULO
+*	DIVIDE Positive W68 = AB/(X,X+1), AB=MODULO
 *
 DIVPOS		CLR     W66
 DP1			INC     W66
@@ -168,6 +217,85 @@ DP3			SEC
 			ROR     1,X
 			BRA     DP2
 DIVPE		RTS
+			ELSE
+*  NEW!
+*
+*	AB <= (SP+4,SP+5)/(SP+2,SP+3)
+*
+DIVIDE		TSX
+			INX
+			INX
+			LDAA	2,X
+			LDAB	3,X
+*
+*	DIV0	AB <= AB/(IX,IX+1), W4E <= MOD
+*
+DIV0		CLR     W82+5
+			TST     0,X
+			BNE     DV1
+			TST     1,X
+			BNE     DV3
+			JMP     ERROR
+DV1			BPL     DV3
+			INC     W82+5
+			NEG     1,X
+			BNE     DV2
+			DEC     0,X
+DV2			COM     0,X
+DV3			TSTA
+			BPL     DV4
+			DEC     W82+5
+			BSR     NEGAB
+DV4			JSR     DIVPOS
+			STAA    W4E
+			STAB    W4E+1
+			LDAA    W68
+			LDAB    W68+1
+			TST     W82+5
+			BEQ     NEGE
+NEGAB		NEGA
+			NEGB
+			SBCA	#0
+NEGE		RTS
+*
+*	DIVIDE Positive W68 = AB/(IX,IX+1), AB=MODULO
+*
+DIVPOS		LDX		0,X
+			STX		W66
+			LDX     #0
+			TST		W66
+			BNE		DP1
+			PSHA
+			LDAA	W66+1
+			STAA	W66
+			CLR		W66+1
+			PULA
+			LDX		#8
+DP1			INX						; 4
+			ASL     W66+1			; 6
+			ROL     W66				; 6
+			BCC     DP1				; 4
+			ROR     W66
+			ROR     W66+1
+			CLR     W68
+			CLR     W68+1
+DP2			SUBB    W66+1
+			SBCA    W66
+			BCC     DP3
+			ADDB    W66+1
+			ADCA    W66
+			CLC
+			FCB     $9C
+DP3			SEC
+			ROL     W68+1
+			ROL     W68
+			DEX
+			BEQ     DIVPE
+			LSR     W66
+			ROR     W66+1
+			BRA     DP2
+DIVPE		RTS
+			ENDIF
 *
 *	RANDOM 1 between AB
 *
@@ -189,7 +317,9 @@ RANDOM		STAA    W6A
 ADD1		ADDB    #1
 			ADCA    #0
 			RTS
-ERROR		SWI
+ERROR		LDX		#DIV0ERROR
+			JSR		PRINTSTR
+			SWI
 *
 * PRINT HEX sub. AccAB is destroyed
 *
@@ -403,18 +533,27 @@ INIT_MUSIC	CLR $00C4
 			DEC $00CB
 			RTS
 *
+DIV0ERROR	FCB	$0D
+			FCC	'DIVIDE BY 0 ERROR'
+			FCB	$0D,$07,$00
+*
 *	Workarea
 *
-ADXWK		RMB		$0061
+			IF		0
+ADXWK		EQU		$0061
+			ENDIF
 TDXWK		EQU		$0063
+IXSAVE		RMB		2
 DBWK		RMB		2
 W4E			RMB		2
 _MOD		EQU		W4E
 W52			RMB		2
 RND			EQU		W52
 W64			RMB		2
-W66			RMB		2
-W68			RMB		2
+;W66			RMB		2
+;W68			RMB		2
+W66			EQU		$005D
+W68			EQU		$006F
 W6A			RMB		2
 W6C			RMB		2
 W6E			RMB		2
