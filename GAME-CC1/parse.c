@@ -442,6 +442,7 @@ Token *tokenize()
 	head.next = NULL;
 	Token *cur = &head;
 	int		linetop=1;
+	static int old_linenumber=0;
 
 //	printf(";start tokenize() *p='%c'\n",*p);
 	while (*p) {
@@ -461,6 +462,10 @@ Token *tokenize()
 				cur->val = strtol(p, &p, 10);
 //				printf(";tokenize TK_LINENUM '%d',p='%s'\n",cur->val,cur->str);
 				cur->len = p-q;
+				if(old_linenumber>=cur->val){
+					error_at(p,"linenumber error %d,%d\n",cur->val,old_linenumber);
+				}
+				old_linenumber = cur->val;
 			}
 			if(*p!=' '){
 //				printf(";REM mark '%c' found. skip line\n",*p);
@@ -1177,10 +1182,15 @@ void program()
 	current_linetop = user_input;
 //	printf(";progtam start\n");
 	int	linenumber = 0;
+	int	old_linenumber = 0;
 	while(!at_eof()){
 //		printf(";line start\t");print_token(token);
 		if(token->kind==TK_LINENUM){
 			linenumber = token->val;
+			if(linenumber<=old_linenumber){
+				error("line number error %d,%d\n",linenumber,old_linenumber);
+			}
+			old_linenumber = linenumber;
 		}
 		if(token->kind==TK_RESERVED){
 //			printf("; ?TK_RESERVED '%s'\n",token->str);
