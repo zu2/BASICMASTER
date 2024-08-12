@@ -260,17 +260,17 @@ NEGE		RTS
 *
 *	DIVIDE Positive W68 = AB/(IX,IX+1), AB=MODULO
 *
-DIVPOS		LDX		0,X
-			STX		W66
-			LDX     #0
-			TST		W66
-			BNE		DP1
-			PSHA
-			LDAA	W66+1
-			STAA	W66
-			CLR		W66+1
-			PULA
-			LDX		#8
+DIVPOS		LDX		0,X				; 6
+			STX		W66				; 5
+			LDX     #0				; 3
+			TST		W66				; 6
+			BNE		DP1				; 4		↑24cycle >256の場合
+			PSHA					; 4
+			LDAA	W66+1			; 3
+			STAA	W66				; 4
+			CLR		W66+1			; 6
+			PULA					; 4
+			LDX		#8				; 3		↑24cycle →48cycle <256の場合
 DP1			INX						; 4
 			ASL     W66+1			; 6
 			ROL     W66				; 6
@@ -362,13 +362,23 @@ TABE		RTS
 *
 *	PRINT AccAB decimal left
 *
-PRINTL		BSR     BDSGN
+PRINTL		CMPA	#0
+			BNE		PRINTL1
+			CMPB	#10
+			BCS		PR1DEC
+PRINTL1		BSR     BDSGN
 PRINTSTR	LDAA    0,X
 			INX
 			TSTA
 			BEQ		TABE
 	        JSR     ASCOUT
 			BRA     PRINTSTR
+*
+*		1桁の数値(0-9)は計算するまでもない
+*
+PR1DEC		ADDB	#'0
+			TBA
+			JMP		ASCOUT
 *
 *	PRINT (SP+2,SP+3) decimal right AccB
 *
@@ -403,7 +413,8 @@ OUTNUM		PSHB
 			BSR		PRINTR
 			RTS
 *
-*** bynary(AccAB) to decimal(IX) ***
+*** bynary(AccAB) to decimal(W82) ***
+*			return IX (start of decimal)
 *
 BYNDEC		LDX		#W82+1
 			STX		W6C
@@ -415,7 +426,7 @@ BDL			STX		W6E
 			JSR		DIVPOS
 			PSHA
 			LDX		W6C
-			LDAA	W68+1
+			LDAA	W68+1			; 商
 			ADDA	#$30
 			STAA	0,X
 			INX
@@ -531,6 +542,14 @@ INIT_MUSIC	CLR $00C4
 			CLR $00CA
 			CLR $00CB
 			DEC $00CB
+			RTS
+*
+KBIN_SUB	JSR	KBIN
+			BCS	NOKEYIN
+			TAB
+			FCB	$81					; skip 1byte
+NOKEYIN		CLRB
+			CLRA
 			RTS
 *
 DIV0ERROR	FCB	$0D
