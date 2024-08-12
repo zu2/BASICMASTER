@@ -678,7 +678,7 @@ Token *tokenize()
 				p++;
 			}
 			if(p==q){
-				error_at(p,"; empty MUSIC string\n");
+				error_at(current_linetop,"; empty MUSIC string\n");
 			}
 			cur->str=makestr(q,p-q);
 			cur->len=p-q;
