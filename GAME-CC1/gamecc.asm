@@ -413,48 +413,51 @@ OUTNUM		PSHB
 			BSR		PRINTR
 			RTS
 *
-*** bynary(AccAB) to decimal(W82) ***
-*			return IX (start of decimal)
+*	AccAB to Decimal W82+1..W82+5
+*			return IX decimal top (zero blanking)
 *
-BYNDEC		LDX		#W82+1
+BYNDEC		LDX		#W82+1			; 10進文字保存領域。W82+1〜W82+5
 			STX		W6C
 			LDX		#CTABLE
-BDL			STX		W6E
-			LDX		0,X
-			STX		W70
-			LDX		#W70
-			JSR		DIVPOS
+BYNDEC0		CLR		W68				; 商0-9
+			STX		W6E
+BYNDEC2		INC		W68				; 商を+1
+			SUBB	1,X
+			SBCA	0,X
+			BCC		BYNDEC2
+			ADDB	1,X				; 引きすぎた
+			ADCA	0,X
 			PSHA
+			LDAA	W68				; 商を文字に変換
+			ADDA	#'0'-1			; 1つ多いはずなので引く
+			STX		W6E
 			LDX		W6C
-			LDAA	W68+1			; 商
-			ADDA	#$30
 			STAA	0,X
 			INX
 			STX		W6C
-			LDX		W6E
 			PULA
+			LDX		W6E
 			INX
 			INX
-			TST		1,X
-			BNE		BDL
-			LDX		#W82
-*
-*** ZERO BLANKING ***
-*
-ZROBLK		COM		5,X
-ZB1			INX
+			CPX		#CTABLEE
+			BNE		BYNDEC0
+			ADDB	#'0'			; 余り(AccAB)が最後の1桁になっている
+			COMB					; ゼロブランキングのフラグとして使うので反転
+			STAB	W82+5
+ZEROBLK		LDX		#W82			; 変換終了。ゼロブランキングする
+ZB1			INX						; Zero blanking
 			LDAB	0,X
 			CMPB	#'0'
 			BEQ		ZB1
 			COM		W82+5
 ZB2			RTS
-*
 CTABLE		FDB     10000
 			FDB     1000
 			FDB     100
 			FDB     10
-			FDB     1
-			FDB     0
+;			FDB		1
+CTABLEE		EQU		*
+			ENDIF
 *
 BEL			EQU		$07
 BS			EQU		$08
