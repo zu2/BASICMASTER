@@ -31,6 +31,13 @@ MacOSで作成しましたが、特別なルーチンは使っていないので
 - あると思うなエラーメッセージ
 - アセンブルしないとわからないエラーもあります。行番号の重複など。
 
+## サンプル
+
+TinyGalaxyをGAME言語に書き直したものです。アセンブラルーチン無しでこの速度が出ています。
+
+- TinyGalaxy.game
+- TinyGalaxy.mot コンパイル済み。CALL $2000で実行
+
 ## インタプリタとの速度比較動画
 
 [https://www.youtube.com/watch?v=G-P93oGVb98](https://www.youtube.com/watch?v=G-P93oGVb98)
