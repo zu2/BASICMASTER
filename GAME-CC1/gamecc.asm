@@ -298,25 +298,34 @@ DIVPE		RTS
 			ENDIF
 *
 *	RANDOM 1 between AB
+*			cf.https://tinyework.flston.com/xorshift-on-hd6301
 *
-RANDOM		STAA    W6A
-			STAB    W6A+1
-			LDX     #RND
-			LDAA    #$3D
-			LDAB    #$09
-			JSR     MULTIPLY
-			BSR     ADD1
-			STAA    RND
-			STAB    RND+1
-			LDX     #W6A
+RANDOM		STAB	W6A+1
+			STAA	W6A
+			LDAB	RND
+			LSRB
+			LDAB	RND+1
+			RORB
+			EORB	RND
+			STAB	RND
+			RORB
+			EORB	RND+1
+			STAB	RND+1
+			TBA
+			EORA	RND
+			STAA	RND
+			LDX		#W6A
 			TAB
 			CLRA
-			JSR     MULTIPLY
+			JSR		MULTIPLY
 			TAB
 			CLRA
-ADD1		ADDB    #1
-			ADCA    #0
+			ADDB	#1
+			ADCA	#0
 			RTS
+*
+*
+*
 ERROR		LDX		#DIV0ERROR
 			JSR		PRINTSTR
 			SWI
@@ -569,7 +578,7 @@ IXSAVE		RMB		2
 DBWK		RMB		2
 W4E			RMB		2
 _MOD		EQU		W4E
-W52			RMB		2
+W52			EQU		$00E0
 RND			EQU		W52
 W64			RMB		2
 ;W66			RMB		2
