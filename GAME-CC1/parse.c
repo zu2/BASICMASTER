@@ -274,7 +274,9 @@ void add_LINENO(int n,char *s){
 
 char *existLINENO(int v)
 {
+//	printf("; search linenumber %d\n",v);
 	for(int i=0; i<line_count; i++){
+//		printf("; line %d\n",LINENO[i].n);
 		if(LINENO[i].n==v){
 			return LINENO[i].s;
 		}
@@ -662,14 +664,14 @@ Token *tokenize()
 		}else if(startswitch(p,"[=0")){
 			error_at(p,"Monitor command not implemented\n");
 		}else if(startswitch(p,"[=1")){
-//			printf("; MUSIC extension found.\n");
+			printf("; MUSIC extension found.\n");
 			cur = new_token(TK_MUSIC,cur,p,3);
 			p+=3;
 			while(*p==' '){
 				p++;
 			}
 			char *q=p;
-			while(*p!='\0' && *p!='%'){
+			while(*p!='\0' && *p!='\r' && *p!='\n' && *p!='%'){
 				p++;
 			}
 			if(*p=='%'){
@@ -680,10 +682,10 @@ Token *tokenize()
 			}
 			cur->str=makestr(q,p-q);
 			cur->len=p-q;
-			if(*p=='%'){
-				p++;
+			if(*p=='\0'){
+				p--;
 			}
-//			printf("; MUSIC string: '%s'\n",cur->str);
+			printf("; MUSIC string: '%s'\n",cur->str);
 			continue;
 		}else if(*p=='['){
 			cur = new_token(TK_KEYBOARD,cur,p,1);
@@ -1134,7 +1136,7 @@ Node	*stmt()
 					token=token->next->next->next;
 //					printf("; => IF GOTO fusion");print_nodes_ln(node);
 					if(lineno>0 && (existLINENO(lineno)==NULL)){
-						error("; undefined linenumber found. %d\n",lineno);
+						error("; IFGOTO undefined linenumber %d\n",lineno);
 					}
 					return node;
 				}
@@ -1161,7 +1163,7 @@ Node	*stmt()
 //				printf(";stmt pseudo assign2 ");print_nodes(node);printf("\n");
 //				printf(";stmt pseudo assign2 =");print_nodes(ex);printf("\n");
 				if(node->val>0 && existLINENO(node->val)==NULL){
-					error("; undefined line number %d\n",node->val);
+					error("; GOTO/GOSUB undefined line number %d\n",node->val);
 				}
 				token=token->next;
 				return	node;
