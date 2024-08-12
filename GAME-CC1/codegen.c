@@ -176,12 +176,6 @@ void	ABSD()
 		LABEL(positive);
 }
 
-void	AND_I(int v)
-{
-		printf("\tANDB\t#%d\n",low(v));
-		printf("\tANDA\t#%d\n",high(v));
-}
-
 void	LDD_I(int v)
 {
 		if(low(v)==0){
@@ -260,6 +254,70 @@ void	SUB_L(char *v)
 		printf("\tSUBB\t%s+1\n",	v);
 		printf("\tSBCA\t%s\n",		v);
 }
+//
+void	AND_I(int v)
+{
+		printf("\tANDB\t#%d\n",low(v));
+		printf("\tANDA\t#%d\n",high(v));
+}
+void	AND_X(int v)
+{
+		printf("\tANDB\t%d,X\n", v+1);
+		printf("\tANDA\t%d,X\n", v);
+}
+void	AND_V(char *v)
+{
+		printf("\tANDB\t_%s+1\n",	v);
+		printf("\tANDA\t_%s\n",		v);
+}
+void	AND_L(char *v)
+{
+		printf("\tANDB\t%s+1\n",	v);
+		printf("\tANDA\t%s\n",		v);
+}
+//
+void	OR_I(int v)
+{
+		printf("\tORAB\t#%d\n", low(v));
+		printf("\tORAA\t#%d\n", high(v));
+}
+void	OR_X(int v)
+{
+		printf("\tORAB\t%d,X\n", v+1);
+		printf("\tORAA\t%d,X\n", v);
+}
+void	OR_V(char *v)
+{
+		printf("\tORAB\t_%s+1\n",	v);
+		printf("\tORAA\t_%s\n",		v);
+}
+void	OR_L(char *v)
+{
+		printf("\tORAB\t%s+1\n",	v);
+		printf("\tORAA\t%s\n",		v);
+}
+//
+void	EOR_I(int v)
+{
+		printf("\tEORB\t#%d\n", low(v));
+		printf("\tEORA\t#%d\n", high(v));
+}
+void	EOR_X(int v)
+{
+		printf("\tEORB\t%d,X\n", v+1);
+		printf("\tEORA\t%d,X\n", v);
+}
+void	EOR_V(char *v)
+{
+		printf("\tEORB\t_%s+1\n",	v);
+		printf("\tEORA\t_%s\n",		v);
+}
+void	EOR_L(char *v)
+{
+		printf("\tEORB\t%s+1\n",	v);
+		printf("\tEORA\t%s\n",		v);
+}
+
 void	TAB()
 {
 		printf("\tTAB\n");
@@ -362,11 +420,11 @@ void	STAB_X(int v)
 {
 		printf("\tSTAB\t%d,X\n",v);
 }
-void	STAA_L(char *str)
+void	STAA_V(char *str)
 {
 		printf("\tSTAB\t_%s\n",str);
 }
-void	STAB_L(char *str)
+void	STAB_V(char *str)
 {
 		printf("\tSTAB\t_%s+1\n",str);
 }
@@ -427,6 +485,11 @@ void	JSR(char *to)
 void	JSR_X(int v)
 {
 		printf("\tJSR\t%d,X\n",v);
+}
+void	MUL256()
+{
+		printf("\tTBA\n");
+		CLRB();
 }
 
 void
@@ -517,6 +580,118 @@ void	gen_store_var(Node *node)
 void gen_expr(Node *node);
 
 //
+//	var:offset) または var(offset)のアドレスを得る(IX+戻り値)
+//		ex. A:1)
+//				LDX	_A
+//				(1が戻ってくる)
+//
+int
+gen_array_address(Node *node)
+{
+	if(node==NULL || !isARRAY(node)){
+		printf("; not a array. why? ");print_nodes_ln(node);
+		error("; gen_array_address error\n");
+	}
+	if(node->kind==ND_ARRAY1){						// 1バイト間接モード
+		if(isNUM(node->lhs)){					// オフセットが定数
+			int offset = node->lhs->val;
+			if(offset>=0 && offset<256){
+				LDX_V(node->str);
+				return offset;
+			}else if(offset<0 && offset>=-6){
+				LDX_V(node->str);
+				switch(offset){
+				case -6: DEX();
+				case -5: DEX();
+				case -4: DEX();
+				case -3: DEX();
+				case -2: DEX();
+				case -1: DEX();
+						return	0;
+				default: break;
+				}
+			}else if(offset>=256 && offset<512){
+				printf("\tINC\t_%s\n",node->str);
+				LDX_V(node->str);
+				printf("\tDEC\t_%s\n",node->str);
+				return	offset-256;
+			}else if(offset>=512 && offset<1024){
+				printf("\tINC\t_%s\n",node->str);
+				printf("\tINC\t_%s\n",node->str);
+				LDX_V(node->str);
+				printf("\tDEC\t_%s\n",node->str);
+				printf("\tDEC\t_%s\n",node->str);
+				return	offset-512;
+			}else if(offset<0 && offset>=-256){
+				printf("\tDEC\t_%s\n",node->str);
+				LDX_V(node->str);
+				printf("\tINC\t_%s\n",node->str);
+				return	offset+256;
+			}else if(offset<-256 && offset>=-512){
+				printf("\tDEC\t_%s\n",node->str);
+				printf("\tDEC\t_%s\n",node->str);
+				LDX_V(node->str);
+				printf("\tINC\t_%s\n",node->str);
+				printf("\tINC\t_%s\n",node->str);
+				return	offset+512;
+			}
+		}
+		gen_expr(node->lhs);	// 添字の計算をして
+		ADD_V(node->str);		// 配列の添字はAccABにある
+		TDX();					// TFR D,X
+		return 0;
+	}else if(node->kind==ND_ARRAY2){					// 2バイト間接モード
+		if(isNUM(node->lhs)){						// オフセットが定数
+			int offset = node->lhs->val;
+			if(offset>=0 && offset<=127){
+				LDX_V(node->str);
+				return	offset*2;
+			}else if(offset<=-1 && offset>=-3){
+				LDX_V(node->str);
+				switch(offset){
+				case -3: DEX(); DEX();
+				case -2: DEX(); DEX();
+				case -1: DEX(); DEX();
+						return	0;
+				default: break;
+				}
+			}else if(offset>=128 && offset<255){
+				printf("\tINC\t_%s\n",node->str);
+				LDX_V(node->str);
+				printf("\tDEC\t_%s\n",node->str);
+				return	offset*2-256;
+			}else if(offset>=256 && offset<511){
+				printf("\tINC\t_%s\n",node->str);
+				LDX_V(node->str);
+				printf("\tDEC\t_%s\n",node->str);
+				return	offset*2-512;
+			}else if(offset<0 && offset>=-127){
+				printf("\tDEC\t_%s\n",node->str);
+				LDX_V(node->str);
+				printf("\tINC\t_%s\n",node->str);
+				return	offset*2+256;
+			}else if(offset<-127 && offset>=-255){
+				printf("\tDEC\t_%s\n",node->str);
+				printf("\tDEC\t_%s\n",node->str);
+				LDX_V(node->str);
+				printf("\tINC\t_%s\n",node->str);
+				printf("\tINC\t_%s\n",node->str);
+				return	offset*2+512;
+			}
+		}
+		gen_expr(node->lhs);	// 添字の計算をして
+		ASLD();
+		ADD_V(node->str);		// 配列の添字はAccABにある
+		TDX();					// TFR D,X
+		return 0;
+	}
+	error("; what's happen? gen_array_address\n");
+	return 0;
+}
+
+void gen_expr(Node *node);
+
+//
 //	if cc is true then AccAB=1 else AccAB=0
 //
 void
@@ -563,7 +738,9 @@ gen_compare(Node *node)
 			LDX_V(node->lhs->str);
 		}
 		if(isNUM(node->rhs)){
-			CPX_I(node->rhs->val);
+			if(node->rhs->val){			// LDXはZフラグが立つので0との比較は省略
+				CPX_I(node->rhs->val);
+			}
 		}else{
 			CPX_V(node->rhs->str);
 		}
@@ -731,6 +908,202 @@ gen_compare(Node *node)
 }
 
 void
+gen_branch_if_true(Node *node,char *label)
+{
+//	printf("; gen_branch_if_true start\n");
+	// > (ND_VAR I) 10 )
+	if(node==NULL){
+//		printf(";branch_if_true node==NULL !\n");
+		return;
+	}
+	//printf("; compare node? ");print_nodes_ln(node);
+	if(!isCompare(node)){
+		error("not compare");
+	}
+//	printf("; gen_branch_if_false %s :",label);print_nodes_ln(node);
+	char	*if_false = new_label();
+	char	*if_true = new_label();
+	// 0との比較はサボれる場合がある
+	if(isNUM(node->rhs) && node->rhs->val==0
+	&& (node->kind==ND_GE || node->kind==ND_LT)){ // >=0 と <0 の場合は bit15(N flag)を見れば良い
+		if(isVAR(node->lhs)){
+			TST_V0(node->lhs->str);
+		}else{
+			gen_expr(node->lhs);
+			TSTA();
+		}
+		if(node->kind==ND_LT){			// lhs<0
+			Bxx("PL",if_false);			// lhs>=0 then false
+		}else if(node->kind==ND_GE){	// lhs>=0
+			Bxx("MI",if_false);			// lhs<0  then false
+		}
+		JMP(label);						// jump if true
+		LABEL(if_false);
+		return;
+	}else if(isNUMorVAR(node->lhs) && isNUMorVAR(node->rhs) && isEQorNE(node)){	// ==,!= はCPXで
+		if(isNUM(node->lhs)){
+			LDX_I(node->lhs->val);
+		}else{
+			LDX_V(node->lhs->str);
+		}
+		if(isNUM(node->rhs)){
+			if(node->rhs->val){			// LDXはZフラグが立つので0との比較は省略
+				CPX_I(node->rhs->val);
+			}
+		}else{
+			CPX_V(node->rhs->str);
+		}
+		if(node->kind==ND_EQ){		// lhs==rhs?
+			Bxx("NE",if_false);
+		}else{						// lhs!=rhs
+			Bxx("EQ",if_false);	
+		}
+		LABEL(if_true);
+		JMP(label);
+		LABEL(if_false);
+		return;
+	}else if(isARRAY2(node->lhs) && isNUMorVAR(node->rhs) && isEQorNE(node)){// 配列との ==,!= はCPXで
+		int offset = gen_array_address(node->lhs);		// 配列アドレスがIXに入っている
+		LDX_X(offset);
+		if(isNUM(node->rhs)){
+			if(node->rhs->val){			// LDXはZフラグが立つので0との比較は省略
+				CPX_I(node->rhs->val);
+			}
+		}else{
+			CPX_V(node->rhs->str);
+		}
+		if(node->kind==ND_EQ){		// lhs==rhs?
+			Bxx("NE",if_false);
+		}else{						// lhs!=rhs
+			Bxx("EQ",if_false);	
+		}
+		LABEL(if_true);
+		JMP(label);
+		LABEL(if_false);
+		return;
+	}else if(isNUM(node->rhs)){					// 左辺は式、右辺は定数
+		gen_expr(node->lhs);					// AccABに結果がある
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		case ND_EQ:	CMPB_I(low(node->rhs->val));
+					Bxx("NE",if_false);
+					CMPA_I(high(node->rhs->val));
+					Bxx("NE",if_false);
+					break;
+		case ND_NE:	CMPB_I(low(node->rhs->val));
+					Bxx("NE",if_true);
+					CMPA_I(high(node->rhs->val));
+					Bxx("EQ",if_false);
+					break;
+		case ND_GE:	SUB_I(node->rhs->val);		// >=
+					Bxx("LT",if_false);
+					break;
+		case ND_GT:	SUB_I(node->rhs->val);		// >
+					Bxx("GT",if_true);
+					Bxx("NE",if_false);
+					TSTB();
+					Bxx("EQ",if_false);
+					break;
+		case ND_LE:	SUB_I(node->rhs->val);		// <=
+					Bxx("LT",if_true);
+					Bxx("NE",if_false);
+					TSTB();
+					Bxx("NE",if_false);
+					break;
+		case ND_LT:	SUB_I(node->rhs->val);		// <
+					Bxx("GE",if_false);
+					break;
+		default:
+					error("Bxx not known\n");
+		}
+		LABEL(if_true);
+		JMP(label);
+		LABEL(if_false);
+		return;
+	}else if(isVAR(node->rhs)){					// 左辺は式、右辺は変数
+		gen_expr(node->lhs);					// AccABに結果がある
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		case ND_EQ:	CMPB_V(node->rhs->str);
+					Bxx("NE",if_false);
+					CMPA_V(node->rhs->str);
+					Bxx("NE",if_false);
+					break;
+		case ND_NE:	CMPB_V(node->rhs->str);
+					Bxx("NE",if_true);
+					CMPA_V(node->rhs->str);
+					Bxx("EQ",if_false);
+					break;
+		case ND_GE:	SUB_V(node->rhs->str);		// >=
+					Bxx("LT",if_false);
+					break;
+		case ND_GT:	SUB_V(node->rhs->str);		// >
+					Bxx("GT",if_true);
+					Bxx("NE",if_false);
+					TSTB();
+					Bxx("EQ",if_false);
+					break;
+		case ND_LE:	SUB_V(node->rhs->str);		// <=
+					Bxx("LT",if_true);
+					Bxx("NE",if_false);
+					TSTB();
+					Bxx("NE",if_false);
+					break;
+		case ND_LT:	SUB_V(node->rhs->str);		// <
+					Bxx("GE",if_false);
+					break;
+		default:
+					error("Bxx not known\n");
+		}
+		LABEL(if_true);
+		JMP(label);
+		LABEL(if_false);
+		return;
+	}else{
+		gen_expr(node->lhs);
+		PSHD();
+		gen_expr(node->rhs);
+		TSX();
+		// 以下、AccAB(rhs)とStackTOP(lhs)を比較(rhs-lhsの値を見ている）
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		case ND_EQ:	CMPB_X(1);
+					Bxx("NE",if_false);
+					CMPA_X(0);
+					Bxx("NE",if_false);
+					break;
+		case ND_NE:	CMPB_X(1);
+					Bxx("NE",if_true);
+					CMPA_X(0);
+					Bxx("EQ",if_false);
+					break;
+		case ND_GE:	SUB_X(0);
+					Bxx("GE",if_false);	// rhs-lhs<0 (lhs<rhs) then true
+					break;
+		case ND_GT:	SUB_X(0);
+					Bxx("LT",if_true);
+					Bxx("NE",if_false);
+					TSTB();
+					Bxx("NE",if_false);
+					break;
+		case ND_LE:	SUB_X(0);
+					Bxx("LT",if_false);
+					Bxx("NE",if_true);
+					TSTB();
+					Bxx("EQ",if_false);
+					break;
+		case ND_LT:	SUB_X(0);
+					Bxx("LT",if_false);
+					break;
+		default:
+					error("Bxx not known\n");
+		}
+		LABEL(if_true);
+		INS2();
+		JMP(label);
+		LABEL(if_false);
+		INS2();
+		return;
+	}
+}
+void
 gen_branch_if_false(Node *node,char *label)
 {
 //	printf("; gen_branch_if_false start\n");
@@ -770,7 +1143,9 @@ gen_branch_if_false(Node *node,char *label)
 			LDX_V(node->lhs->str);
 		}
 		if(isNUM(node->rhs)){
-			CPX_I(node->rhs->val);
+			if(node->rhs->val){			// LDXはZフラグが立つので0との比較は省略
+				CPX_I(node->rhs->val);
+			}
 		}else{
 			CPX_V(node->rhs->str);
 		}
@@ -1020,6 +1395,9 @@ void gen_expr(Node *node)
 			return;
 	case ND_KEYBOARD:{
 			char	*label = new_label();
+#if			1
+			JSR("KBIN_SUB");
+#else
 			JSR("KBIN");
 			Bxx("CS",label);
 			TAB();
@@ -1027,15 +1405,11 @@ void gen_expr(Node *node)
 			LABEL(label);
 			CLRB();
 			CLRA();
+#endif
 			}
 			return;
 	default:
 			break;
-	}
-	if(node->kind==ND_MUL && node->rhs->kind==ND_NUM && node->rhs->val==2){
-		gen_expr(node->lhs);
-		ASLD();
-		return;
 	}
 	// 単項演算子
 	switch (node->kind) {
@@ -1119,6 +1493,54 @@ void gen_expr(Node *node)
 			}
 			break;
 	case ND_MUL:
+			if(isNUM(node->rhs)){
+				int	shift=0;
+				switch(node->rhs->val){
+				case 256:
+					gen_expr(node->lhs);
+					MUL256();
+					return;
+				case 20:
+				case 10:
+				case 5:
+					gen_expr(node->lhs);
+					STD_L("TDXWK");
+					ASLD_N(2);
+					ADD_L("TDXWK");
+					if(node->rhs->val==20){
+						ASLD();
+						ASLD();
+					}else if(node->rhs->val==10){
+						ASLD();
+					}
+					return;
+				case 12:
+				case 6:
+				case 3:
+					gen_expr(node->lhs);
+					STD_L("TDXWK");
+					ASLD_N(1);
+					ADD_L("TDXWK");
+					if(node->rhs->val==12){
+						ASLD();
+						ASLD();
+					}else if(node->rhs->val==6){
+						ASLD();
+					}
+					return;
+				case 128:	shift++;
+				case 64:	shift++;
+				case 32:	shift++;
+				case 16:	shift++;
+				case 8:		shift++;
+				case 4:		shift++;
+				case 2:		shift++;
+					gen_expr(node->lhs);
+					ASLD_N(shift);
+					return;
+				default:;
+				}
+			}
 			gen_expr(node->lhs);
 			PSHD();
 			gen_expr(node->rhs);
@@ -1212,6 +1634,51 @@ void gen_expr(Node *node)
 			gen_compare(node);
 			}
 			break;
+	case ND_BITAND:
+			gen_expr(node->lhs);
+			if(node->rhs->kind==ND_NUM){	
+				AND_I(node->rhs->val);
+			}else if (node->rhs->kind==ND_VAR){
+				AND_V(node->rhs->str);
+			}else{
+				PSHD();
+				gen_expr(node->rhs);
+				TSX();
+				AND_X(0);
+				INS2();
+				return;
+			}
+			break;
+	case ND_BITOR:
+			gen_expr(node->lhs);
+			if(node->rhs->kind==ND_NUM){	
+				OR_I(node->rhs->val);
+			}else if (node->rhs->kind==ND_VAR){
+				OR_V(node->rhs->str);
+			}else{
+				PSHD();
+				gen_expr(node->rhs);
+				TSX();
+				OR_X(0);
+				INS2();
+				return;
+			}
+			break;
+	case ND_BITXOR:
+			gen_expr(node->lhs);
+			if(node->rhs->kind==ND_NUM){	
+				EOR_I(node->rhs->val);
+			}else if (node->rhs->kind==ND_VAR){
+				EOR_V(node->rhs->str);
+			}else{
+				PSHD();
+				gen_expr(node->rhs);
+				TSX();
+				EOR_X(0);
+				INS2();
+				return;
+			}
+			break;
 	default:
 			error("Unknown token\n");
 			break;
@@ -1236,7 +1703,7 @@ gen_stmt(Node *node)
 //		printf("*\t");print_line(node->str);printf("\n");
 		LABEL(new_line_label(node->val));
 		current = node;
-		break;
+		return;
 	case ND_ASM: {
 			char *p=node->str;
 			if(*p==' '){
@@ -1247,72 +1714,59 @@ gen_stmt(Node *node)
 			}
 			printf("%s\n",p);
 		}
-		break;
-	case ND_ASSIGN:
-		if(node->lhs->kind==ND_VAR){
-			gen_expr(node->rhs);
-			gen_store_var(node->lhs);
-		}else if(node->lhs->kind==ND_ARRAY1){
-			//  (ND_ASSIGN (ND_ARRAY1 str=N (ND_VAR str=I)) (ND_NUM 0))
-//			printf("; store to array1 %s:",node->lhs->str);print_nodes_ln(node);
-			Node	*sub = node->lhs->lhs;
-			Node	*rhs = node->rhs;
-			if(isNUM(sub) && sub->val>=-256 && sub->val<=255
-			&& isNUM(rhs) && rhs->val ==0) {					// 添字が小さな定数& 0クリア
-				int		offset = (sub->val);
-				if(sub->val>=0){				// 127〜0 ならoffsetで対応
-					LDX_V(node->lhs->str);
-					CLR1_X(offset);
-				}else if(sub->val>=-2)	{		// -1,-2 はDEXする
-					LDX_V(node->lhs->str);
-					if(offset<0){ DEX();DEX(); }
-					if(offset<-1){ DEX();DEX(); }
-					CLR1_X(0);
-				}else{							// -256〜-5
-					printf("\tDEC\t_%s\n",node->lhs->str);
-					LDX_V(node->lhs->str);
-					printf("\tINC\t_%s\n",node->lhs->str);
-					CLR_X(256+(sub->val));
-				}
-				return;
-			}
-			if(isNUM(sub) && sub->val>=-256 && sub->val<=255){	// 添字が小さな定数
-				int		offset = (sub->val);
-				if(isNUM(rhs)){
-					LDAB_I(rhs->val);
-				}else if(isVAR(rhs)){
-					LDAB_V(rhs->str);
+		return;
+	case ND_ASSIGN: {
+			Node *lhs = node->lhs;		// 代入先変数
+			Node *rhs = node->rhs;		// 右辺
+			if(node->lhs->kind==ND_VAR){
+				gen_expr(rhs);
+				gen_store_var(lhs);
+			}else if(isADDorSUB(rhs) &&	isNUMorVAR(rhs->rhs) && isSameARRAY(lhs,rhs->lhs)){
+				//  A(X)=A(X)+n
+				printf("; folding ARRAY self assign: ");print_nodes_ln(node);
+				int offset = gen_array_address(lhs);
+				if(isARRAY1(lhs)){
+					LDAB_X(offset);
+					CLRA();
 				}else{
-					gen_expr(rhs);
+					LDD_X(offset);
 				}
-				if(sub->val>=0){	// 255〜0 ならoffsetで対応
-					LDX_V(node->lhs->str);
+				if(isNUM(rhs->rhs)){
+					if(rhs->kind==ND_ADD){
+						ADD_I(rhs->rhs->val);
+					}else{
+						SUB_I(rhs->rhs->val);
+					}
+				}else{
+					if(rhs->kind==ND_ADD){
+						ADD_V(rhs->rhs->str);
+					}else{
+						SUB_V(rhs->rhs->str);
+					}
+				}
+				if(isARRAY1(lhs)){
 					STAB_X(offset);
-				}else if(sub->val>=-4){	// -1〜-4 はDEXする
-					LDX_V(node->lhs->str);
-					if(offset<0) { DEX();}
-					if(offset<-1){ DEX();}
-					if(offset<-2){ DEX();}
-					if(offset<-3){ DEX();}
-					STAB_X(0);
-				}else{					// -256〜-5
-					printf("\tDEC\t_%s\n",node->lhs->str);
-					LDX_V(node->lhs->str);
-					printf("\tINC\t_%s\n",node->lhs->str);
-					STAB_X(256+(sub->val));
+				}else{
+					STD_X(offset);
 				}
+			}else if(lhs->kind==ND_ARRAY1){
+				if(isNUM(rhs) && rhs->val==0){
+					int	offset = gen_array_address(lhs);	// X=adrs, offset=subscript
+					CLR1_X(offset);
+					return;
+				}else if(isNUM(rhs)){
+					int	offset = gen_array_address(lhs);	// X=adrs, offset=subscript
+					LDAB_I(rhs->val);
+					STAB_X(offset);
+					return;
+				}else if(isVAR(rhs)){
+					int	offset = gen_array_address(lhs);	// X=adrs, offset=subscript
+					LDAB_V(rhs->str);
+					STAB_X(offset);
 				return;
-			}
-			gen_expr(node->lhs->lhs);			// calculate subscript
-			ADD_V(node->lhs->str);				// 左辺のアドレスはDにある
-			if(isNUM(rhs) && (rhs->val==0)){	// 右辺が0
-				TDX();		// TFR D,X
-				CLR1_X(0);
-			}else if(isNUM(rhs) && (rhs->val>0 && rhs->val<=255)){	// 右辺は1byte定数
-				TDX();		// TFR D,X
-				LDAB_I(rhs->val);
-				STAB_X(0);
-			}else{
+				}
+				gen_expr(lhs->lhs);			// calculate subscript
+				ADD_V(lhs->str);				// 左辺のアドレスはDにある
 				PSHD();
 				gen_expr(rhs);
 				TSX();
@@ -1320,64 +1774,27 @@ gen_stmt(Node *node)
 				INS();
 				INS();
 				STAB_X(0);
-			}
-			break;
-		}else if(node->lhs->kind==ND_ARRAY2){
-			//  (ND_ASSIGN (ND_ARRAY2 str=N (ND_VAR str=I)) (ND_NUM 0))
-			printf("; store to array2 %s:",node->lhs->str);print_nodes_ln(node);
-			Node	*sub = node->lhs->lhs;
-			int		offset = (sub->val)*2;
-			Node	*rhs = node->rhs;
-			if(isNUM(sub) && sub->val>=-127 && sub->val<=127
-			&& isNUM(rhs) && rhs->val ==0) {					// 添字が小さな定数& 0クリア
-				if(sub->val>=0){				// 127〜0 ならoffsetで対応
-					LDX_V(node->lhs->str);
+				return;
+			}else if(lhs->kind==ND_ARRAY2){
+				//  (ND_ASSIGN (ND_ARRAY2 str=N (ND_VAR str=I)) (ND_NUM 0))
+				if(isNUM(rhs) && rhs->val==0){
+					int	offset = gen_array_address(lhs);	// X=adrs, offset=subscript
 					CLR_X(offset);
-				}else if(sub->val>=-2){			// -1,-2 はDEXする
-					LDX_V(node->lhs->str);
-					if(offset<0){ DEX();DEX(); }
-					if(offset<-1){ DEX();DEX(); }
-					CLR_X(0);
-				}else{							// -127〜-3
-					printf("\tDEC\t_%s\n",node->lhs->str);
-					LDX_V(node->lhs->str);
-					printf("\tINC\t_%s\n",node->lhs->str);
-					CLR_X(256+offset);
-				}
-				return;
-			}
-			if(isNUM(sub) && sub->val>=-127 && sub->val<=127){	// 添字が小さな定数
-				if(isNUM(rhs)){
+					return;
+				}else if(isNUM(rhs)){
+					int	offset = gen_array_address(lhs);	// X=adrs, offset=subscript
 					LDD_I(rhs->val);
-				}else if(isVAR(rhs)){
-					LDD_V(rhs->str);
-				}else{
-					gen_expr(rhs);
-				}
-				printf("; ND_ASSIGN ND_ARRAY2 sub->val=%d,offset=%d\n",sub->val,offset);
-				if(sub->val>=0){				// 127〜0 ならoffsetで対応
-					LDX_V(node->lhs->str);
 					STD_X(offset);
-				}else if(sub->val>=-2){			// -1,-2 はDEXする
-					LDX_V(node->lhs->str);
-					if(sub->val<0){ DEX();DEX(); }
-					if(sub->val<-1){ DEX();DEX(); }
-					STD_X(0);
-				}else{							// -127〜-3
-					printf("\tDEC\t_%s\n",node->lhs->str);
-					LDX_V(node->lhs->str);
-					printf("\tINC\t_%s\n",node->lhs->str);
-					STD_X(256+offset);
+					return;
+				}else if(isVAR(rhs)){
+					int	offset = gen_array_address(lhs);	// X=adrs, offset=subscript
+					LDD_V(rhs->str);
+					STD_X(offset);
+					return;
 				}
-				return;
-			}
-			gen_expr(node->lhs->lhs);			// calculate subscript
-			ASLD();
-			ADD_V(node->lhs->str);				// 左辺のアドレスはDにある
-			if(isNUM(rhs) && (rhs->val==0)){
-				TDX();		// TFR D,X
-				CLR_X(0);
-			}else{
+				gen_expr(lhs->lhs);			// calculate subscript
+				ASLD();
+				ADD_V(lhs->str);				// 左辺のアドレスはDにある
 				PSHD();
 				gen_expr(rhs);
 				TSX();
@@ -1385,33 +1802,82 @@ gen_stmt(Node *node)
 				INS();
 				INS();
 				STD_X(0);
+				return;
+			}else{
+				error("ASSIGN VAR error not var/array\n");
 			}
-			break;
-		}else{
-			error("ASSIGN VAR error not var/array\n");
 		}
-		break;
+		return;
 	case ND_IF: {
-			printf("; ");print_nodes(node);printf("\n");
+//			printf("; ");print_nodes(node);printf("\n");
 			char	*IF_TRUE	= new_label();
+			char	*IF_FALSE	= new_label();
 			char	*NEXT_LINE	= new_line_label(current->rhs->val);
-			if(isVAR(node->lhs)){							// if 変数 の場合
-				LDX_V(node->lhs->str);
+			Node	*lhs = node->lhs;
+			if(isVAR(lhs)){							// if 変数 の場合
+				LDX_V(lhs->str);
 				printf("\tBNE\t%s\n",IF_TRUE);
 				printf("\tJMP\t%s\n",NEXT_LINE);
 				LABEL(IF_TRUE);
 				return;
-			}else if(isCompare(node->lhs)){
-				printf("; call gen_branch_if_false\n");
-				gen_branch_if_false(node->lhs,NEXT_LINE);
+#if	0
+			}else if((lhs->kind==ND_EQ) && (lhs->lhs->kind==ND_KEYBOARD) && isNUM(lhs->rhs)){
+				if(lhs->rhs->val==0){	// check no keyin
+					char *nokey = new_label();
+					JSR("KBIN");		// AccA = keyin
+					Bxx("CS",IF_TRUE);
+					JMP(NEXT_LINE);
+					LABEL(IF_TRUE);
+				}else{
+					// (== (ND_KEYBOARD) (ND_NUM 82))
+					char *nokey = new_label();
+					JSR("KBIN");		// AccA = keyin
+					Bxx("CS",IF_FALSE);
+					CMPB_I(lhs->rhs->val);
+					Bxx("EQ",IF_TRUE);
+					LABEL(IF_FALSE);
+					JMP(NEXT_LINE);
+					LABEL(IF_TRUE);
+				}
+				return;
+#endif
+			}else if(isCompare(lhs)){
+//				printf("; call gen_branch_if_false\n");
+				gen_branch_if_false(lhs,NEXT_LINE);
 				return;
 			}
-			gen_expr(node->lhs);
+			gen_expr(lhs);
 			printf("\tABA\n");
 			printf("\tBNE\t%s\n",IF_TRUE);
 			printf("\tBCS\t%s\n",IF_TRUE);
 			JMP(NEXT_LINE);
 			LABEL(IF_TRUE);
+		}
+		return;
+	case ND_IFGOTO: {
+//			printf("; ");print_nodes(node);printf("\n");
+			char	*IF_TRUE	= new_label();
+			char	*IF_FALSE	= new_label();
+			char	*GOTOLINE	= new_line_label(node->val);
+			if(isVAR(node->lhs)){							// if 変数 の場合
+				LDX_V(node->lhs->str);
+				printf("\tBEQ\t%s\n",IF_FALSE);
+				printf("\tJMP\t%s\n",GOTOLINE);
+				LABEL(IF_FALSE);
+				return;
+			}else if(isCompare(node->lhs)){					// if 条件の場合
+//				printf("; call gen_branch_if_true\n");
+				gen_branch_if_true(node->lhs,GOTOLINE);
+				return;
+			}
+			gen_expr(node->lhs);							// if 式 の演算結果はAccABに入る’
+			TSTB();
+			Bxx("NE",IF_TRUE);
+			TSTA();
+			Bxx("EQ",IF_FALSE);
+			LABEL(IF_TRUE);
+			JMP(GOTOLINE);
+			LABEL(IF_FALSE);
 		}
 		return;
 	case ND_RETURN:
@@ -1452,22 +1918,22 @@ gen_stmt(Node *node)
 		}
 		return;
 	case ND_FOR: {
-		// (ND_FOR J (ND_SETVAR J 0 ) 10 )
-		char	*FOR_LABEL=new_for_label(node->val);
-		char	*TO_LABEL=new_to_label(node->str);
-		FORTO_RMB[(node->str)[0]-'A'] = TO_LABEL;
-		gen_stmt(node->lhs);
-		if(isNUM(node->rhs)){
-			LDX_I(node->rhs->val);
-			STX_L(TO_LABEL);
-		}else if(isVAR(node->rhs)){
-			LDX_V(node->rhs->str);
-			STX_L(TO_LABEL);
-		}else{
-			gen_expr(node->rhs);
-			STD_L(TO_LABEL);
-		}
-		LABEL(FOR_LABEL);
+			// (ND_FOR J (ND_SETVAR J 0 ) 10 )
+			char	*FOR_LABEL=new_for_label(node->val);
+			char	*TO_LABEL=new_to_label(node->str);
+			FORTO_RMB[(node->str)[0]-'A'] = TO_LABEL;
+			gen_stmt(node->lhs);
+			if(isNUM(node->rhs)){
+				LDX_I(node->rhs->val);
+				STX_L(TO_LABEL);
+			}else if(isVAR(node->rhs)){
+				LDX_V(node->rhs->str);
+				STX_L(TO_LABEL);
+			}else{
+				gen_expr(node->rhs);
+				STD_L(TO_LABEL);
+			}
+			LABEL(FOR_LABEL);
 		}
 		return;
 	case ND_NEXT: {
@@ -1555,6 +2021,20 @@ gen_stmt(Node *node)
 		}else if(isVAR(node->lhs)){
 			LDX_V(node->lhs->str);
 			STX_V(node->str);
+		}else if(isARRAY(node->lhs)){			// Z=A(I) or Z=A:I)
+			printf("; ND_SETVAR ");print_nodes_ln(node);
+			int offset = gen_array_address(node->lhs);		// IXにA(I) or A:I)のアドレスが入る
+			if(node->lhs->kind==ND_ARRAY1){
+				LDAB_X(offset);
+				STAB_V(node->str);
+				CLR_V0(node->str);
+			}else if(node->lhs->kind==ND_ARRAY2){
+				LDX_X(offset);
+				STX_V(node->str);
+			}else{
+				printf("; ND_SETVAR error ");print_nodes_ln(node);
+				error("; what happen?");
+			}
 		}else if((node->lhs->kind==ND_NEG)		// Z=-Z  (ND_SETVAR Z (ND_NEG (ND_VAR Z)))
 			  && (isVAR(node->lhs->lhs))
 			  && (strcmp(node->str,node->lhs->lhs->str)==0)){
@@ -1598,11 +2078,8 @@ gen_stmt(Node *node)
 				JSR_X(0);
 			}else{
 				gen_expr(node->lhs);
-				PSHD();
-				TSX();
-				LDX_X(0);
+				TDX();
 				JSR_X(0);
-				INS2();
 			}
 			STD_V("CALLRET");
 		}
@@ -1620,30 +2097,30 @@ gen_stmt(Node *node)
 		}
 		return;
 	case ND_NEGVAR:
-			printf("; ND_NEGVAR %s\n",node->str);
+//			printf("; ND_NEGVAR %s\n",node->str);
 			NEG_V(node->str);
 			return;
 	case ND_INCVAR:
-			printf("; ND_INCVAR %s\n",node->str);
+//			printf("; ND_INCVAR %s\n",node->str);
 			LDX_V(node->str);
 			INX();
 			STX_V(node->str);
 			return;
 	case ND_DECVAR:
-			printf("; ND_DEXVAR %s\n",node->str);
+//			printf("; ND_DEXVAR %s\n",node->str);
 			LDX_V(node->str);
 			DEX();
 			STX_V(node->str);
 			return;
 	case ND_INC2VAR:
-			printf("; ND_INC2VAR %s\n",node->str);
+//			printf("; ND_INC2VAR %s\n",node->str);
 			LDX_V(node->str);
 			INX();
 			INX();
 			STX_V(node->str);
 			return;
 	case ND_DEC2VAR:
-			printf("; ND_DEX2VAR %s\n",node->str);
+//			printf("; ND_DEX2VAR %s\n",node->str);
 			LDX_V(node->str);
 			DEX();
 			DEX();
@@ -1651,7 +2128,7 @@ gen_stmt(Node *node)
 			return;
 	default:
 		//printf(";code1 default\n");
-		break;
+		return;
 	}
 }
 
@@ -1669,6 +2146,7 @@ prologue()
 	LABEL(new_line_label(0));
 	printf("\tSTS\t_RETSP\n");
 	JSR("INIT_MUSIC");
+	LABEL(new_line_label(1));
 }
 
 void

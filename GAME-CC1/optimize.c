@@ -13,9 +13,57 @@ int	isNUMorVAR(Node *node)
 	return(isNUM(node)||isVAR(node));
 }
 
+int	isSameNUM(Node *x,Node *y)
+{
+	return (isNUM(x) && isNUM(y) && (x->val==y->val));
+}
+
 int	isSameVAR(Node *x,Node *y)
 {
 	return( isVAR(x) && isVAR(y) && strcmp(x->str,y->str)==0 );
+}
+
+int	isARRAY1(Node *node)
+{
+	return(node->kind==ND_ARRAY1);
+}
+int	isARRAY2(Node *node)
+{
+	return(node->kind==ND_ARRAY2);
+}
+int	isARRAY(Node *node)
+{
+	return(isARRAY1(node)||isARRAY2(node));
+}
+int	isSameARRAY(Node *x,Node *y)
+{
+	if(isARRAY1(x) && isARRAY1(y)
+	&&	(strcmp(x->str,y->str)==0)
+	&&	isSameNUM(x->lhs,y->lhs)){
+		return 1;
+	}
+	if(isARRAY1(x) && isARRAY1(y)
+	&&	(strcmp(x->str,y->str)==0)
+	&&	isSameVAR(x->lhs,y->lhs)){
+		return 1;
+	}
+	if(isARRAY2(x) && isARRAY2(y)
+	&&	(strcmp(x->str,y->str)==0)
+	&&	isSameNUM(x->lhs,y->lhs)){
+		return 1;
+	}
+	if(isARRAY2(x) && isARRAY2(y)
+	&&	(strcmp(x->str,y->str)==0)
+	&&	isSameVAR(x->lhs,y->lhs)){
+		return 1;
+	}
+	return	0;
+}
+
+
+int	isADDorSUB(Node *node)
+{
+	return((node->kind==ND_ADD) || (node->kind==ND_SUB));
 }
 
 int	isCompare(Node *node)
@@ -70,6 +118,7 @@ Node	*node_opt(Node	*old)
 	}
 	if((node->lhs!=NULL && node->lhs->kind != ND_NONE)
 	|| (node->rhs!=NULL && node->rhs->kind != ND_NONE)){
+//		左辺と右辺をそれぞれoptimizeしたものを新たなノードとする
 //		printf("; optimize new copy node %d\n",++cc);
 		node = new_copy_node(old);
 //		printf("; ");print_nodes(old);printf("\n");
@@ -99,15 +148,30 @@ Node	*node_opt(Node	*old)
 			node->rhs = old->lhs;
 			return	node;
 		}
+		// 左辺が定数の加算で、右辺が定数なら計算しておく
+		if((node->lhs->kind==ND_ADD && isNUM(node->lhs->rhs))
+		&& isNUM(node->rhs)){
+			printf("; ");print_nodes_ln(node);
+			printf("; Folding constant addition +%d+%d\n",node->lhs->rhs->val,node->rhs->val);
+			int	val = node->lhs->rhs->val + node->rhs->val;
+			node = new_copy_node(node->lhs);
+			node->rhs->val = val;
+			printf("; => ");print_nodes_ln(node);
+			return node;
+		}
 	}else if(node->kind==ND_SUB){
 		if(isNUM(node->lhs) && isNUM(node->rhs)){
 			return new_node_num(node->lhs->val - node->rhs->val);
+		}
+		if(isNUM(node->rhs)){		// 定数減算は負数の加算にする
+			return new_binary(ND_ADD, node->lhs, new_node_num(-(node->rhs->val)));
 		}
 		if(isNUMorVAR(node->lhs) && !isNUMorVAR(node->rhs)){
 			node = new_binary(ND_ADD, node_opt(new_unary(ND_NEG,old->rhs)), old->lhs);
 			return	node;
 		}
 	}else if(node->kind==ND_MUL){
+//		printf("; optimize ND_MUL\n");
 		if(isNUM(node->lhs) && isNUM(node->rhs)){
 			return new_node_num(node->lhs->val * node->rhs->val);
 		}
@@ -121,6 +185,7 @@ Node	*node_opt(Node	*old)
 		if(!isNUM(node->rhs)){
 			return node;
 		}
+//		printf("; optimize ND_MUL rhs val=%d\n",node->rhs->val);
 		// 以下は右辺が定数値 (左辺が定数・変数でないときに注意）
 		switch(node->rhs->val){
 		case -32:	return new_ASLD(node_opt(new_unary(ND_NEG,node->lhs)),5);
@@ -138,14 +203,14 @@ Node	*node_opt(Node	*old)
 		case 32:	return new_ASLD(node->lhs,5);
 		default:	break;
 		}
-		if(isNUMorVAR(node->lhs)){
+		if(isNUMorVAR(node->lhs)){		// 左辺が定数か変数の場合
 			switch(node->rhs->val){
 			case 3:		return new_binary(ND_ADD,new_ASLD(node->lhs,1),node->lhs);
 			case 5:		return new_binary(ND_ADD, new_ASLD(node->lhs,2),node->lhs);
 			case 10:	return new_ASLD(new_binary(ND_ADD, new_ASLD(node->lhs,2),node->lhs),1);
 			default:	break;
 			}
-		}
+		}	// 左辺が式の場合は一時領域が必要なので、ここでは最適化できない。残念
 		return	node;
 	}else if(node->kind==ND_DIV){
 #if	0
@@ -173,6 +238,7 @@ Node	*node_opt(Node	*old)
 			return new_ANDI_MOD(node->lhs->lhs,32767);
 		}
 	}else if(node->kind==ND_ASSIGN){
+//		printf("; ND_ASSIGN optimize :");print_nodes_ln(node);
 		// (ND_ASSIGN (ND_VAR A) (ND VAR A)) -> omit
 		if(isSameVAR(node->lhs,node->rhs)){
 			char	*buf=calloc(1,256);
@@ -180,7 +246,7 @@ Node	*node_opt(Node	*old)
 			return new_node_REM(buf);
 		}
 		// assign constant or simple variable
-		// (ND_ASSIGN (ND_VAR B) 1)
+		// (ND_ASSIGN (ND_VAR B) (ND_NUM 1))
 		if(isVAR(node->lhs) && isNUMorVAR(node->rhs)){
 			opt = new_unary(ND_SETVAR,node->rhs);
 			opt->str = node->lhs->str;
@@ -215,6 +281,14 @@ Node	*node_opt(Node	*old)
 				opt = new_node(ND_INC2VAR);
 				opt->str = node->str;
 				return opt;
+			}else if(node->lhs->rhs->val==-1){
+				opt = new_node(ND_DECVAR);
+				opt->str = node->str;
+				return opt;
+			}else if(node->lhs->rhs->val==-2){
+				opt = new_node(ND_DEC2VAR);
+				opt->str = node->str;
+				return opt;
 			}
 		}else if(node->lhs->kind==ND_SUB
 		&& isVAR(node->lhs->lhs)
@@ -242,7 +316,7 @@ Node	*node_opt(Node	*old)
 		}
 	}else if(isEQorNE(node)){		// ==, !== の定数・変数との比較は入れ替えておくと後が楽
 		if((isNUM(node->lhs) && !isNUM(node->rhs))
-		|| (isVAR(node->lhs) && !isVAR(node->rhs))){
+		|| (isVAR(node->lhs) && !isNUM(node->rhs) && !isVAR(node->rhs))){
 			Node	*opt = new_copy_node(node);
 			opt->lhs = node->rhs;
 			opt->rhs = node->lhs;

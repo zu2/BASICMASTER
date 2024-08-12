@@ -140,6 +140,7 @@ typedef enum {
 	ND_INC2VAR,
 	ND_DEC2VAR,
 	ND_ASM,
+	ND_IFGOTO,
 } NodeKind;
 
 typedef struct Node Node;
@@ -185,8 +186,14 @@ int		isVAR(Node *node);
 int		isNUMorVAR(Node *node);
 int		isCompare(Node *node);
 int		isEQorNE(Node *node);
+int		isSameNUM(Node *x,Node *y);
 int		isSameVAR(Node *x,Node *y);
-Node	*node_opt(Node	*node);
+int		isARRAY1(Node *node);
+int		isARRAY2(Node *node);
+int		isARRAY(Node *node);
+int		isSameARRAY(Node *x,Node *y);
+int		isADDorSUB(Node *node);
+Node	*node_opt(Node *node);
 
 //
 // from codegen.c

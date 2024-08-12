@@ -242,6 +242,7 @@ print_nodes(Node *node)
 	case ND_INC2VAR:	print_var_node("ND_INC2VAR",node);break;
 	case ND_DEC2VAR:	print_var_node("ND_DEC2VAR",node);break;
 	case ND_ASM:		printf("(ND_ASM str=\"%s\")",node->str);break;
+	case ND_IFGOTO:		printf("(ND_IFGOTO val=%d ",node->val);print_nodes(node->lhs);printf(")");break;
 	default:
 			printf(";unknown node kind %d\n",node->kind);
 			break;
@@ -258,6 +259,29 @@ print_nodes_ln(Node *node)
 // 入力プログラム
 char *user_input;
 char *current_linetop;
+int line_count=0;
+typedef	struct {
+	int		n;
+	char	*s;
+} line_t;
+line_t LINENO[10000];
+
+void add_LINENO(int n,char *s){
+	LINENO[line_count].n = n;
+	LINENO[line_count].s = s;
+	line_count++;
+}
+
+char *existLINENO(int v)
+{
+	for(int i=0; i<line_count; i++){
+		if(LINENO[i].n==v){
+			return LINENO[i].s;
+		}
+	}
+	if(v==1) return "OK";
+	return NULL;
+}
 
 char	*
 get_least_line(char	*p)
@@ -280,6 +304,7 @@ void	error(char *fmt, ...)
 	vfprintf(stderr,fmt,ap);
 	fprintf(stderr,"\n");
 	fflush(stderr);
+	fprintf(stderr,"; %s\n",current_linetop);
 	exit(1);
 }
 
@@ -302,6 +327,7 @@ void error_at(char *loc, char *fmt, ...) {
 	fprintf(stderr, "^ ");
 	vfprintf(stderr, fmt, ap);
 	fprintf(stderr, "\n");
+	fprintf(stderr,"; %s\n",get_least_line(current_linetop));
 	exit(1);
 }
 
@@ -385,6 +411,7 @@ void expect(char *op) {
 	if (token->kind != TK_RESERVED
 	|| strlen(op) != token->len
 	|| memcmp(token->str,op,token->len)){
+		printf("; ");print_token(token);printf("\n");
 		error_at(token->str,"expected '%c'", op);
 	}
 	token = token->next;
@@ -436,6 +463,7 @@ bool startswitch(char *p,char *q)
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize()
 {
+	int line_count=0;
 	char	*p = user_input;
 	current_linetop = user_input;
 	Token head;
@@ -454,7 +482,7 @@ Token *tokenize()
 			}
 			// 行番号のはず
 			if (!isdigit(*p)) {
-				error("not a linenumber '%c'\n",*p);
+				error_at(p,"not linenumber '%c'\n",*p);
 			}else{
 				char *str=get_least_line(p);
 				cur = new_token(TK_LINENUM, cur, str,strlen(str));
@@ -466,6 +494,7 @@ Token *tokenize()
 					error_at(p,"linenumber error %d,%d\n",cur->val,old_linenumber);
 				}
 				old_linenumber = cur->val;
+				add_LINENO(cur->val,str);
 			}
 			if(*p!=' '){
 //				printf(";REM mark '%c' found. skip line\n",*p);
@@ -965,6 +994,12 @@ Node *expr()
 			node = new_binary(ND_MUL, node, unary());
 		}else if(consume_op("/")){
 			node = new_binary(ND_DIV, node, unary());
+		}else if(consume_op("&")){
+			node = new_binary(ND_BITAND, node, unary());
+		}else if(consume_op(".")){
+			node = new_binary(ND_BITOR, node, unary());
+		}else if(consume_op("!")){
+			node = new_binary(ND_BITXOR, node, unary());
 		}else{
 		  return node;
 		}
@@ -1086,6 +1121,23 @@ Node	*stmt()
 				node = new_binary(pa->nk,ex,expr());
 //				printf("; ND_PRINTR made.\n");
 //				printf("; ");print_nodes_ln(node);
+			}else if(pa->nk==ND_IF){			// IF .. GOTO 処理
+//				printf(";next token:");print_token(token);
+//				printf("; ");print_token(token->next);
+//				printf("; ");print_token(token->next->next);
+//				printf("; ");print_token(token->next->next->next);
+				if(token->kind==TK_SEP && token->next->kind==TK_GOTO && token->next->next->kind==TK_NUM){
+//					printf("; IF GOTO fusion   ");print_nodes_ln(node);
+					int lineno=token->next->next->val;
+					node->kind = ND_IFGOTO;
+					node->val  = lineno;
+					token=token->next->next->next;
+//					printf("; => IF GOTO fusion");print_nodes_ln(node);
+					if(lineno>0 && (existLINENO(lineno)==NULL)){
+						error("; undefined linenumber found. %d\n",lineno);
+					}
+					return node;
+				}
 			}
 //			printf(";stmt pseudo assign1 ");print_nodes(node);printf("\n");
 //			printf(";stmt pseudo assign1 =");print_nodes(ex);printf("\n");
@@ -1108,7 +1160,9 @@ Node	*stmt()
 				node->val = (sign<0)? -1:tk->val;
 //				printf(";stmt pseudo assign2 ");print_nodes(node);printf("\n");
 //				printf(";stmt pseudo assign2 =");print_nodes(ex);printf("\n");
-
+				if(node->val>0 && existLINENO(node->val)==NULL){
+					error("; undefined line number %d\n",node->val);
+				}
 				token=token->next;
 				return	node;
 			}
