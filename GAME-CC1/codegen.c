@@ -598,7 +598,11 @@ gen_array_address(Node *node)
 			if(offset>=0 && offset<256){
 				LDX_V(node->str);
 				return offset;
+#ifdef	O_SPEED
+			}else if(offset<0 && offset>=-3){
+#else
 			}else if(offset<0 && offset>=-6){
+#endif
 				LDX_V(node->str);
 				switch(offset){
 				case -6: DEX();
@@ -615,6 +619,7 @@ gen_array_address(Node *node)
 				LDX_V(node->str);
 				printf("\tDEC\t_%s\n",node->str);
 				return	offset-256;
+#ifndef	O_SPEED
 			}else if(offset>=512 && offset<1024){
 				printf("\tINC\t_%s\n",node->str);
 				printf("\tINC\t_%s\n",node->str);
@@ -622,11 +627,13 @@ gen_array_address(Node *node)
 				printf("\tDEC\t_%s\n",node->str);
 				printf("\tDEC\t_%s\n",node->str);
 				return	offset-512;
+#endif
 			}else if(offset<0 && offset>=-256){
 				printf("\tDEC\t_%s\n",node->str);
 				LDX_V(node->str);
 				printf("\tINC\t_%s\n",node->str);
 				return	offset+256;
+#ifndef	O_SPEED
 			}else if(offset<-256 && offset>=-512){
 				printf("\tDEC\t_%s\n",node->str);
 				printf("\tDEC\t_%s\n",node->str);
@@ -634,6 +641,7 @@ gen_array_address(Node *node)
 				printf("\tINC\t_%s\n",node->str);
 				printf("\tINC\t_%s\n",node->str);
 				return	offset+512;
+#endif
 			}
 		}
 		gen_expr(node->lhs);	// 添字の計算をして
@@ -660,16 +668,19 @@ gen_array_address(Node *node)
 				LDX_V(node->str);
 				printf("\tDEC\t_%s\n",node->str);
 				return	offset*2-256;
+#ifndef		O_SPEED
 			}else if(offset>=256 && offset<511){
 				printf("\tINC\t_%s\n",node->str);
 				LDX_V(node->str);
 				printf("\tDEC\t_%s\n",node->str);
 				return	offset*2-512;
+#endif
 			}else if(offset<0 && offset>=-127){
 				printf("\tDEC\t_%s\n",node->str);
 				LDX_V(node->str);
 				printf("\tINC\t_%s\n",node->str);
 				return	offset*2+256;
+#ifndef	O_SPEED
 			}else if(offset<-127 && offset>=-255){
 				printf("\tDEC\t_%s\n",node->str);
 				printf("\tDEC\t_%s\n",node->str);
@@ -677,6 +688,7 @@ gen_array_address(Node *node)
 				printf("\tINC\t_%s\n",node->str);
 				printf("\tINC\t_%s\n",node->str);
 				return	offset*2+512;
+#endif
 			}
 		}
 		gen_expr(node->lhs);	// 添字の計算をして
@@ -1555,7 +1567,7 @@ void gen_expr(Node *node)
 				int16_t	x=node->lhs->val;
 				int16_t	y=node->rhs->val;
 				int16_t	d=x/y;
-				int16_t m=x%y;
+				int16_t m=abs(x%y);
 				LDX_I(m);
 				STX_V("MOD");
 				LDD_I(d);
@@ -1948,12 +1960,12 @@ gen_stmt(Node *node)
 		printf(";  ");print_nodes_ln(node_step);
 		printf(";=>");print_nodes_ln(opt);
 		if(opt->kind==ND_INCVAR
-		&& strcmp(opt->str,node->str)==0){	// (ND_INCVAR str=I)
+		&& isSameVAR(opt,node)==0){	// (ND_INCVAR str=I)
 			LDX_V(opt->str);
 			INX();
 			STX_V(opt->str);
 		}else if(opt->kind==ND_INC2VAR
-		&& strcmp(opt->str,node->str)==0){	// (ND_INC2VAR str=I)
+		&& isSameVAR(opt,node)==0){	// (ND_INC2VAR str=I)
 			LDX_V(opt->str);
 			INX();
 			INX();
