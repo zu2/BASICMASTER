@@ -82,6 +82,22 @@ void	TSTB()
 {
 		printf("\tTSTB\n");
 }
+void	INCA()
+{
+		printf("\tINCA\n");
+}
+void	INCB()
+{
+		printf("\tINCB\n");
+}
+void	DECA()
+{
+		printf("\tINCA\n");
+}
+void	DECB()
+{
+		printf("\tINCB\n");
+}
 void	TST_V0(char	*str)
 {
 		printf("\tTST\t_%s\n",str);
@@ -1562,12 +1578,12 @@ void gen_expr(Node *node)
 			break;
 	case ND_DIV:
 			// 余り(MOD)の処理があるので簡単ではない
+			// 符号拡張に注意
 			if(isNUM(node->lhs) && isNUM(node->rhs)){	// 定数同士の除算の場合、大抵はMODの設定
-				// 負数の場合など大丈夫?
 				int16_t	x=node->lhs->val;
 				int16_t	y=node->rhs->val;
 				int16_t	d=x/y;
-				int16_t m=abs(x%y);
+				int16_t m=abs(x%y);						// GAME68では余りは常に正
 				LDX_I(m);
 				STX_V("MOD");
 				LDD_I(d);
@@ -1579,18 +1595,23 @@ void gen_expr(Node *node)
 				LDD_I(1);
 				return;
 			}
+			// 変数/定数
 			if(isVAR(node->lhs) && isNUM(node->rhs) && node->rhs->val>0){
 //				printf("; DIV debug: ");print_nodes_ln(node);
 				int	val=node->rhs->val;
 				char *str=node->lhs->str;
 				int	shift=0;
 				int	mask=val-1;
+				char *skip = new_label();
 				switch(val){
 				case	256: // 上位下位バイトを分ければ簡単
 							LDAB_V(str);
 							CLRA();
 							STD_V("MOD");
 							printf("\tLDAB\t_%s\n",str);		// 後で直す
+							Bxx("PL",skip);							// 符号拡張
+							DECA();
+							LABEL(skip);
 							return;
 				case	16384:shift++;
 				case	8192:shift++;
