@@ -1596,6 +1596,7 @@ void gen_expr(Node *node)
 				return;
 			}
 			// 変数/定数
+#if	0
 			if(isVAR(node->lhs) && isNUM(node->rhs) && node->rhs->val>0){
 //				printf("; DIV debug: ");print_nodes_ln(node);
 				int	val=node->rhs->val;
@@ -1604,13 +1605,14 @@ void gen_expr(Node *node)
 				int	mask=val-1;
 				char *skip = new_label();
 				switch(val){
-				case	256: // 上位下位バイトを分ければ簡単
+				case	256: // 上位下位バイトを分ければ簡単...ではなかった
 							LDAB_V(str);
 							CLRA();
 							STD_V("MOD");
 							printf("\tLDAB\t_%s\n",str);		// 後で直す
-							Bxx("PL",skip);							// 符号拡張
+							Bxx("PL",skip);						// 符号拡張
 							DECA();
+							ADD_I(1);
 							LABEL(skip);
 							return;
 				case	16384:shift++;
@@ -1639,6 +1641,7 @@ void gen_expr(Node *node)
 				default: break;
 				}
 			}
+#endif
 			gen_expr(node->lhs);
 			PSHD();
 			gen_expr(node->rhs);
