@@ -92,11 +92,11 @@ void	INCB()
 }
 void	DECA()
 {
-		printf("\tINCA\n");
+		printf("\tDECA\n");
 }
 void	DECB()
 {
-		printf("\tINCB\n");
+		printf("\tDECB\n");
 }
 void	TST_V0(char	*str)
 {
