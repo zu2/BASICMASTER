@@ -134,10 +134,18 @@ void	INS2()
 		INS();
 }
 
-void	PSHD()
+void	PSHA()
+{
+		printf("\tPSHA\n");
+}
+void	PSHB()
 {
 		printf("\tPSHB\n");
-		printf("\tPSHA\n");
+}
+void	PSHD()
+{
+		PSHB();
+		PSHA();
 }
 void	PULD()
 {
@@ -1596,31 +1604,20 @@ void gen_expr(Node *node)
 				return;
 			}
 			// 変数/定数
-#if	0
 			if(isVAR(node->lhs) && isNUM(node->rhs) && node->rhs->val>0){
 //				printf("; DIV debug: ");print_nodes_ln(node);
 				int	val=node->rhs->val;
 				char *str=node->lhs->str;
 				int	shift=0;
 				int	mask=val-1;
-				char *skip = new_label();
 				switch(val){
-				case	256: // 上位下位バイトを分ければ簡単...ではなかった
-							LDAB_V(str);
-							CLRA();
-							STD_V("MOD");
-							printf("\tLDAB\t_%s\n",str);		// 後で直す
-							Bxx("PL",skip);						// 符号拡張
-							DECA();
-							ADD_I(1);
-							LABEL(skip);
-							return;
 				case	16384:shift++;
 				case	8192:shift++;
 				case	4096:shift++;
 				case	2048:shift++;
 				case	1024:shift++;
 				case	512:shift++;
+				case	256:shift++;
 				case	128:shift++;
 				case	64:	shift++;
 				case	32:	shift++;
@@ -1628,11 +1625,15 @@ void gen_expr(Node *node)
 				case	8:	shift++;
 				case	4:	shift++;
 				case	2:	shift++;
+							LDAB_I(shift);
+							PSHB();
+							LDD_I(mask);
+							PSHD();
 							LDD_V(str);
-							AND_I(mask);
-							STD_V("MOD");
-							LDD_V(str);
-							ASRD_N(shift);
+							JSR("DIVPOW2");
+							INS();
+							INS();
+							INS();
 							return;
 				case	1:	// 要る?
 							CLR_V("MOD");
@@ -1641,7 +1642,6 @@ void gen_expr(Node *node)
 				default: break;
 				}
 			}
-#endif
 			gen_expr(node->lhs);
 			PSHD();
 			gen_expr(node->rhs);

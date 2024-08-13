@@ -150,6 +150,36 @@ ML202		DEX						;	4
 			LDX		TDXWK
 			RTS
 			ENDIF
+*
+*	Division by powers of 2
+*			AccAB		Number to be divided
+*			SP+2,SP+3	Mask (2^-1)
+*			SP+4		Number of shifts
+*
+DIVPOW2		TSX
+			STAA	W66
+			BPL		DIVPOW01
+			NEGA			; If the dividend is negative, make it positive
+			NEGB
+			SBCA	#0
+DIVPOW01	PSHB
+			PSHA
+			ANDB	3,X		; mask
+			ANDA	2,X		; mask
+			STAB	_MOD+1
+			STAA	_MOD
+			PULA
+			PULB
+DIVPOW02	ASRA
+			RORB
+			DEC		4,X
+			BNE		DIVPOW02
+			TST		W66
+			BPL		DIVPOW99
+			NEGA			; The dividend was negative, take back to negative number.
+			NEGB
+			SBCA	#0
+DIVPOW99	RTS
 			IF	0
 *
 *	AB <= (SP+4,SP+5)/(SP+2,SP+3)
