@@ -35,6 +35,13 @@ blog: [https://www.zukeran.org/shin/d/category/pc/basicmaster/](https://www.zuke
 - 変数・特殊変数を0ページではなく4ページに置いているので、GAME Compilerを作るのは大変かも
 - 詳細は [GAME68/README.md](GAME68/README.md) 参照
 
+## GAME-CC1
+
+- GAME68のクロスコンパイラの習作
+- アセンブラソースを出力します。[a09](https://github.com/Arakula/A09)でアセンブルできます。
+- 10-50倍程度に高速化されます。
+- 詳細は [GAME-CC1/README.md](GAME-CC1/README.md) 参照
+
 ## KUMAJIRI
 
 - KUMAJIRI compiler
