@@ -223,7 +223,7 @@ pair_t table[] = {
 char	*
 escape_bmchar(char *str)
 {
-	char	*buf = calloc(1,1000);
+	char	*buf = calloc(1,2000);
 	char	*bp = buf;
 	char	*p = str;
 	int		in = -1;			// escape mode?
@@ -231,6 +231,7 @@ escape_bmchar(char *str)
 	char	*FCC="\tFCC\t'";
 
 	while(*p){
+		if(bp-buf>1000){ goto toolong; }
 		if(*p=='\'' || *p=='\\' || *p==0x7F){
 			if(in==-1) {
 				in = 1;
@@ -242,10 +243,11 @@ escape_bmchar(char *str)
 				bp+=strlen(FCB);
 				in = 1;
 			}else if(in==1){
+				if(bp-buf>1000){ goto toolong; }
 				*bp++ = ',';
 			}
 			char s[10];
-			sprintf(s,"$%02x",*p);
+			sprintf(s,"$%02x",*p++);
 			memcpy(bp,s,strlen(s));
 			bp+=strlen(s);
 		}else if(*p>=0x20 && *p<=0x7E){				// ASCII
@@ -259,6 +261,7 @@ escape_bmchar(char *str)
 				bp+=strlen(FCC);
 				in = 0;
 			}
+			if(bp-buf>1000){ goto toolong; }
 			*bp++ = *p++;
 			continue;
 		}else{									// not ASCII, escape it!
@@ -273,6 +276,7 @@ escape_bmchar(char *str)
 				bp+=strlen(FCB);
 				in = 1;
 			}else if(in==1){
+				if(bp-buf>1000){ goto toolong; }
 				*bp++ = ',';
 			}
 			int i=0;
@@ -295,5 +299,9 @@ escape_bmchar(char *str)
 	}else if(in==1){
 		*bp++ = '\n';
 	}
+	return buf;
+toolong:
+	*bp='\0';
+	error("; too long string. what? '%s'\n",buf);
 	return buf;
 }
