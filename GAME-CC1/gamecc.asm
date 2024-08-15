@@ -108,7 +108,8 @@ ML02		ASL     W66+1
 			DEX
 			BNE     ML01
 			RTS
-			ELSE
+			ENDIF
+			IF		0
 *
 *	MULTIPLY	AB = (IX,IX+1)*AB
 *
@@ -120,21 +121,21 @@ MULTIPLY	STX		TDXWK
 			BEQ		MULTI02			;	4
 MULTI		LDX		#16             ;   3
 			CLRA					;   2
-			CLRB					;   2           CPX #?
+			CLRB					;   2
 			FCB		$8C				;	3			SKIP2
-ML01	    ASLB					;   2			loop 34cycle/loop
-			ROLA					;   2
-			ROL     W68+1			;   6
-			ROL     W68				;   6
-			BCC     ML02			;   4
-			ADDB	W66+1			;   3
-			ADCA	W66             ;   3
-ML02		DEX						;	4
+ML01	    ASLB					;   2	1
+			ROLA					;   2	1
+			ROL     W68+1			;   6	3
+			ROL     W68				;   6	3
+			BCC     ML02			;   4	2
+			ADDB	W66+1			;   3	2
+			ADCA	W66             ;   3	2
+ML02		DEX						;	4	1		30cycle/loop => *16=>480cycle
 			BNE     ML01            ;   4
 			LDX		TDXWK
 			RTS
 *
-*	MULTIPLY	AB = B * (IX,IX+1)	when AccA==0
+*	MULTIPLY	AB = (W68+1) * (W66,W66+1)	when AccA==0
 *
 MULTI02		LDX		#8				;	3		before 3+2+2=7
 			CLRA					;	2
@@ -150,6 +151,49 @@ ML202		DEX						;	4
 			LDX		TDXWK
 			RTS
 			ENDIF
+			IF		1
+*
+*	MULTIPLY Dr Jefyll's method
+*	MULTIPLY	AB = (IX,IX+1)*AB
+*
+MULTIPLY	STX		TDXWK			;   5 2
+			LDX		0,X				;   6 2
+			STX		W66				;	4 2
+			STAA	W68				;	4 2
+			CLRA					;   2 1
+			STAB	W68+1			;	4 2
+;			BEQ		ML03			;	4 2			Is W68,W68+1 a multiple of 256?
+			CLRB					;   2 1
+			LDX		#8              ;   3 3
+ML01	    ROR		W68+1			;   6 3
+			BCC		ML02			;	4 2
+			ADDB	W66+1			;   3 2
+			ADCA	W66             ;   3 2
+ML02		LSRA					;   2 1
+			RORB					;   2 1
+			DEX						;	4 1
+			BNE     ML01            ;   4 2			28cycle/loop => *8=>224cycle
+			ROR		W68+1			;	6 3
+ML03		TST		W68				;	6 3
+			BNE		ML031			;	4 2			Is W68,W68+1 <= 255?
+			TBA						;	2 1
+			BRA		ML07			;	4 2
+ML031		LDX		#8				;	3 3
+ML04	    ROR		W68				;   6 3
+			BCC		ML05			;   4 2
+			ADDB	W66+1			;   3 2
+			ADCA	W66             ;   3 2
+ML05		LSRA					;   2 1
+			RORB					;   2 1
+			DEX						;	4 1
+			BNE     ML04            ;   4 2			↑28cycle/loop => *8=>224cycle
+			ROR		W68				;   6 3
+ML06		LDAA	W68				;	3 2
+ML07		LDAB	W68+1			;	3 2
+			LDX		TDXWK			;   4 2
+			RTS						;	5 1
+			ENDIF
+
 *
 *	Division by powers of 2
 *			AccAB		Number to be divided
@@ -180,151 +224,89 @@ DIVPOW02	ASRA
 			NEGB
 			SBCA	#0
 DIVPOW99	RTS
-			IF	0
 *
-*	AB <= (SP+4,SP+5)/(SP+2,SP+3)
 *
-DIVIDE		TSX
-			INX
-			INX
-			LDAA	2,X
-			LDAB	3,X
+ERROR		LDX		#DIV0ERROR
+			JSR		PRINTSTR
+			SWI
+DIVZERO		STX		_MOD
+			CLRB
+			CLRA
+			RTS
 *
-*	DIV0	AB <= AB/(IX,IX+1), W4E <= MOD
-*
-DIV0		CLR     W82+5
-			TST     0,X
-			BNE     DV1
-			TST     1,X
-			BNE     DV3
-			JMP     ERROR
-DV1			BPL     DV3
-			INC     W82+5
-			NEG     1,X
-			BNE     DV2
-			DEC     0,X
-DV2			COM     0,X
-DV3			TSTA
-			BPL     DV4
-			DEC     W82+5
-			BSR     NEGAB
-DV4			JSR     DIVPOS
-			STAA    W4E
-			STAB    W4E+1
-			LDAA    W68
-			LDAB    W68+1
-			TST     W82+5
-			BEQ     NEGE
-NEGAB		NEGA
-			NEGB
-			SBCA	#0
-NEGE		RTS
-*
-*	DIVIDE Positive W68 = AB/(X,X+1), AB=MODULO
-*
-DIVPOS		CLR     W66
-DP1			INC     W66
-			ASL     1,X
-			ROL     0,X
-			BCC     DP1
-			ROR     0,X
-			ROR     1,X
-			CLR     W68
-			CLR     W68+1
-DP2			SUBB    1,X
-			SBCA    0,X
-			BCC     DP3
-			ADDB    1,X
-			ADCA    0,X
-			CLC
-			FCB     $9C
-DP3			SEC
-			ROL     W68+1
-			ROL     W68
-			DEC     W66
-			BEQ     DIVPE
-			LSR     0,X
-			ROR     1,X
-			BRA     DP2
-DIVPE		RTS
-			ELSE
-*  NEW!
-*
-*	AB <= (SP+4,SP+5)/(SP+2,SP+3)
+*	AB<=(SP+4,SP+5)/(SP+2,SP+3), _MOD<=modulo
+*  (DIVPOS:W68<=W68/W66  AB<=Modulo)
 *
 DIVIDE		TSX
-			INX
-			INX
-			LDAA	2,X
+			LDX		2,X			; If the divisor is 0, an error occurs.
+			BEQ		ERROR
+			IF		1			; If the dividend is 0, the answer is 0
+			TSX
+			LDX		4,X
+			BEQ		DIVZERO
+			ENDIF
+			TSX
+			CLR		W82+5
 			LDAB	3,X
-*
-*	DIV0	AB <= AB/(IX,IX+1), W4E <= MOD
-*
-DIV0		CLR     W82+5
-			TST     0,X
-			BNE     DV1
-			TST     1,X
-			BNE     DV3
-			JMP     ERROR
-DV1			BPL     DV3
+			LDAA	2,X
+			BPL		DIVIDE02
 			INC     W82+5
-			NEG     1,X
-			BNE     DV2
-			DEC     0,X
-DV2			COM     0,X
-DV3			TSTA
-			BPL     DV4
-			DEC     W82+5
-			BSR     NEGAB
-DV4			JSR     DIVPOS
-			STAA    W4E
-			STAB    W4E+1
-			LDAA    W68
-			LDAB    W68+1
-			TST     W82+5
-			BEQ     NEGE
-NEGAB		NEGA
+			NEGA
 			NEGB
 			SBCA	#0
-NEGE		RTS
+DIVIDE02	STAB	W66+1
+			STAA	W66
+			LDAB	5,X
+			LDAA	4,X
+			BPL     DIVIDE03
+			DEC     W82+5
+			NEGA
+			NEGB
+			SBCA	#0
+DIVIDE03	STAB	W68+1
+			STAA	W68
+			JSR     DIVPOS
+			STAB    W4E+1		; modulo
+			STAA    W4E
+			LDAB    W68+1
+			LDAA    W68
+			TST     W82+5
+			BEQ     DIVIDE99
+			NEGA
+			NEGB
+			SBCA	#0
+DIVIDE99	RTS
 *
-*	DIVIDE Positive W68 = AB/(IX,IX+1), AB=MODULO
+*	DIVIDE Positive number
+*			W68 = W68/W66 AB=MODULO
+*			IX is destroyed
 *
-DIVPOS		LDX		0,X				; 6
-			STX		W66				; 5
-			LDX     #0				; 3
-			TST		W66				; 6
-			BNE		DP1				; 4		↑24cycle >256の場合
-			PSHA					; 4
-			LDAA	W66+1			; 3
-			STAA	W66				; 4
-			CLR		W66+1			; 6
-			PULA					; 4
-			LDX		#8				; 3		↑24cycle →48cycle <256の場合
-DP1			INX						; 4
-			ASL     W66+1			; 6
-			ROL     W66				; 6
-			BCC     DP1				; 4
-			ROR     W66
-			ROR     W66+1
-			CLR     W68
-			CLR     W68+1
-DP2			SUBB    W66+1
-			SBCA    W66
-			BCC     DP3
-			ADDB    W66+1
-			ADCA    W66
-			CLC
-			FCB     $9C
-DP3			SEC
-			ROL     W68+1
-			ROL     W68
-			DEX
-			BEQ     DIVPE
-			LSR     W66
-			ROR     W66+1
-			BRA     DP2
-DIVPE		RTS
+DIVPOS		LDB		W68			; 3 3	the dividend less than or equal to 255 (<=255?)
+			BNE		DIVPOS00	; 4 2		↑7cycle overhead
+			LDA		W68+1		; 3 2	W68 = W68<<8
+			STAA	W68			; 3 2
+			STAB	W68+1		; 3 2	clear W68+1
+			LDX		#8			; 3 3
+			BRA		DIVPOS10	; 4 2	AccB is 0, so the jump destination is CLRA.
+DIVPOS00	LDX		#16			; 3 3
+			CLRB				; 2 1
+DIVPOS10	CLRA				; 2 1	7cycle for preparation
+DIVPOS01	ASL		W68+1		; 6 3
+			ROL		W68			; 6 3
+			ROLB				; 2 1
+			ROLA				; 2 1
+			SUBB	W66+1		; 3 2
+			SBCA	W66			; 3 2
+			BCS		DIVPOS02	; 4 2	↑26cycle
+			INC		W68+1		; 6 3
+			DEX					; 4 1
+			BNE		DIVPOS01	; 4 2	+14cycle => 40cycle/loop => 640cycle for 16bit repetitions
+			RTS					; 5 1	5cycle
+DIVPOS02	ADDB	W66+1		; 3 2
+			ADCA	W66			; 3 2
+			DEX					; 4 1
+			BNE		DIVPOS01	; 4 2	+14cycle => 40cycle/loop => 640cycle for 16bit repetitions
+			RTS					; 5 1	5cycle
 			ENDIF
 *
 *	RANDOM 1 between AB
@@ -353,12 +335,6 @@ RANDOM		STAB	W6A+1
 			ADDB	#1
 			ADCA	#0
 			RTS
-*
-*
-*
-ERROR		LDX		#DIV0ERROR
-			JSR		PRINTSTR
-			SWI
 *
 * PRINT HEX sub. AccAB is destroyed
 *
@@ -440,7 +416,9 @@ PR1			BRA		PRINTSTR
 BDSGN		TSTA
 			BMI		BDNEG
 			BRA		BYNDEC
-BDNEG		JSR		NEGAB
+BDNEG		NEGA
+			NEGB
+			SBCA	#0
 			BSR		BYNDEC
 			LDAB	#'-'
 			DEX
@@ -458,23 +436,23 @@ OUTNUM		PSHB
 BYNDEC		LDX		#W82+1			; 10進文字保存領域。W82+1〜W82+5
 			STX		W6C
 			LDX		#CTABLE
-BYNDEC0		CLR		W68				; 商0-9
-			STX		W6E
+BYNDEC0		STX		W6E
+			CLR		W68				; 商=0
 BYNDEC2		INC		W68				; 商を+1
 			SUBB	1,X
 			SBCA	0,X
 			BCC		BYNDEC2
 			ADDB	1,X				; 引きすぎた
 			ADCA	0,X
-			PSHA
-			LDAA	W68				; 商を文字に変換
-			ADDA	#'0'-1			; 1つ多いはずなので引く
+			PSHB
+			LDAB	W68				; 商を文字に変換
+			ADDB	#'0'-1			; 商は本来の値よりも1つ多くなっているので、-1する
 			STX		W6E
 			LDX		W6C
-			STAA	0,X
+			STAB	0,X
 			INX
 			STX		W6C
-			PULA
+			PULB
 			LDX		W6E
 			INX
 			INX

@@ -544,8 +544,11 @@ Token *tokenize()
 			}
 			continue;
 		}
-		if(*p=='/' && (*(p-1)==' ')){
+		if(*p=='/' && (p[1]==' '||p[1]=='"' || p[1]=='/'||p[1]=='\n')){
 //			printf(";tokenize TK_PRINTCR '/',p='%s'\n",get_least_line(p));
+			if((p[-1]=='"' || p[-1]=='/')){
+				cur = new_token(TK_SEP,cur,p,1);
+			}
 			cur = new_token(TK_PRINTCR,cur,p++,1);
 			continue;
 		}
@@ -572,6 +575,9 @@ Token *tokenize()
 		}
 		if (*p=='"') {		// 文字列
 //			printf(";tokenize TK_STR '%c',p='%s'\n",*p,get_least_line(p));
+			if((p[-1]=='/')||(p[-1]=='"')){
+				cur = new_token(TK_SEP,cur,p,1);
+			}
 			p++;
 			char *q = p;
 			while(*p!='"' && *p!='\r' && *p!='\n' && *p!='\0'){
@@ -1271,6 +1277,9 @@ void program()
 		code[i++] = node;
 		token=token->next;
 		do{
+			if(consume_sep()){
+				continue;
+			}
 			code[i++] = stmt();
 		}while(consume_sep());
 //		printf(";line end\n");
