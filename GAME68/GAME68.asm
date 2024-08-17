@@ -376,34 +376,41 @@ EDEND	LDS	RAMEND
 	JSR	NMICLI	    ; enable NMI/IRQ
 	JMP	PMODE
 *
-*** BYNARY TO DECIMAL ***
+*	AccAB to Decimal W82+1..W82+5
+*			return IX decimal top (zero blanking)
 *
-BYNDEC	LDX	#W82+1
+BYNDEC	LDX	#W82+1		; 10進文字保存領域。W82+1〜W82+5
 	STX	W6C
 	LDX	#CTABLE
-BDL	STX	W6E
-	LDX	0,X
-	STX	W70
-	LDX	#W70
-	JSR	DIVPOS
-	PSHA
+BYNDEC0	STX	W6E
+	CLR	W68		; 商=0
+BYNDEC2	INC	W68		; 商を+1
+	SUBB	1,X
+	SBCA	0,X
+	BCC	BYNDEC2
+	ADDB	1,X		; 引きすぎた
+	ADCA	0,X
+	PSHB
+	LDAB	W68		; 商を文字に変換
+	ADDB	#'0'-1		; 商は本来の値よりも1つ多くなっているので、-1する
+	STX	W6E
 	LDX	W6C
-	LDAA	W68+1
-	ADDA	#$30
-	STAA	0,X
+	STAB	0,X
 	INX
 	STX	W6C
+	PULB
 	LDX	W6E
-	PULA
 	INX
 	INX
-	TST	1,X
-	BNE	BDL
-	LDX	#W82
+	CPX	#CTABLEE
+	BNE	BYNDEC0
+	ADDB	#'0'		; 余り(AccAB)が最後の1桁になっている
+	COMB			; ゼロブランキングのフラグとして使うので反転
+	STAB	W82+5
+ZROBLK	LDX	#W82		; 変換終了。ゼロブランキングする
 *
 *** ZERO BLANKING ***
 *
-ZROBLK	COM	5,X
 ZB1	INX
 	LDAB	0,X
 	CMPB	#'0'
@@ -729,103 +736,87 @@ SUB	SUBB	1,X
 	RTS
 * MULTIPLICATION *
 BO5	CMPA	#'*'
-	BNE	BO6
-	PULA
+	BEQ	BO7
+BO6	JMP	BO8
+BO7	PULA
 *
+*	MULTIPLY Dr Jefyll's method
 *	MULTIPLY	AB = (IX,IX+1)*AB
 *
-MLTPLY	STX	W6C
-	LDX	0,X		;   6
-	STX	W66		;   4
-	STAB	W68+1		;   4
-	STAA	W68		;   4
-	BEQ	MULTI02		;   4
-MULTI	LDX	#16             ;   3
-	CLRA			;   2
-	CLRB			;   2
-ML01    ASLB			;   2	loop 34cycle/loop
-	ROLA			;   2
-	ROL     W68+1		;   6
-	ROL     W68		;   6
-	BCC     ML02		;   4
-	ADDB	W66+1		;   3
-	ADCA	W66             ;   3
-ML02	DEX			;   4
-	BNE     ML01            ;   4
-	LDX	W6C
-	RTS
-*
-*	MULTIPLY	AB = B * (IX,IX+1)	when AccA==0
-*
-MULTI02	LDX	#8		;   3		before 3+2+2=7
-	CLRA			;   2
-	CLRB			;   2
-ML201	ASLB			;   2		loop 24cycle/loop -> 192cycle
-	ROLA			;   2
-	ROL     W68+1		;   6
-	BCC     ML202		;   4
-	ADDB	W66+1		;   3
-	ADCA	W66             ;   3
-ML202	DEX			;   4
-	BNE     ML201           ;   4
-	LDX	W6C
-	RTS
-BO6	JMP	BO8
-*
-*** CONSTANT FOR 2-10 ***
-*
-CTABLE	FDB	10000
-	FDB	1000
-	FDB	100
-	FDB	10
-	FDB	1
-	IF	W66>=$100
-	FDB	0	    ; 次のCLR命令がEXTENDで7F0066であることを期待していた
-	ENDIF
+MLTPLY	STX	W6C		;   5 2
+	LDX	0,X		;   6 2
+	STX	W68		;   5 2
+	TST	W68		;   6 3
+	BEQ	ML000		;   4 2		; if (IX,IX+1)<=255 exchange
+	STAB	W6C+1		;   4 2
+	STAA	W6C		;   4 2
+	BRA	ML001		;   4 2
+ML000	STX	W66		;   4 2
+	STAB	W68+1		;   4 2
+	STAA	W68		;   4 2
+ML001	CLRA			;   2 1
+	CLRB			;   2 1
+	LDX	#8              ;   3 3
+ML01	ROR	W68+1		;   6 3
+	BCC	ML02		;   4 2
+	ADDB	W66+1		;   3 2
+	ADCA	W66             ;   3 2
+ML02	LSRA			;   2 1
+	RORB			;   2 1
+	DEX			;   4 1
+	BNE     ML01            ;   4 2		28cycle/loop => *8=>224cycle
+	ROR	W68+1		;   6 3
+ML03	TST	W68		;   6 3
+	BNE	ML031		;   4 2		Is W68,W68+1 <= 255?
+	TBA			;   2 1
+	BRA	ML07		;   4 2
+ML031	LDX	#8		;   3 3
+ML04    ROR	W68		;   6 3
+	BCC	ML05		;   4 2
+	ADDB	W66+1		;   3 2
+	ADCA	W66             ;   3 2
+ML05	LSRA			;   2 1
+	RORB			;   2 1
+	DEX			;   4 1
+	BNE     ML04            ;   4 2		↑28cycle/loop => *8=>224cycle
+	ROR	W68		;   6 3
+ML06	LDAA	W68		;   3 2
+ML07	LDAB	W68+1		;   3 2
+	LDX	W6C		;   4 2
+	RTS			;   5 1
 *
 *** POSITIVE DIVISION ***
+*	W68 = AB/(IX,IX+1), AB=modulo
+*	IX was destroyed.
 *
-DIVPOS	CLR	W66
-	TST	0,X
-	BNE	DP1
-	PSHA
-	LDAA	1,X
-	STAA	0,X
-	CLR	1,X
-	LDAA	#8
-	STAA	W66
-	PULA
-DP1	INC	W66
-	ASL	1,X
-	ROL	0,X
-	BCC	DP1
-	ROR	0,X
-	ROR	1,X
-	CLR	W68
-	CLR	W68+1
-DP2	BSR	SUB
-	BCC	DP3
-	JSR	ADD
-	CLC
-	FCB	$9C
-DP3	SEC
-	ROL	W68+1
-	ROL	W68
-	DEC	W66
-	BEQ	TDE
-	LSR	0,X
-	ROR	1,X
-	BRA	DP2
-	IF	0
-*
-*** TEST DECIMAL NO. ***
-*
-TSTDEC	LDAB	0,X
-	CMPB	#'0'
-	BCS	TD1
-	CMPB	#'9'+1
-	RTS
-	ENDIF
+DIVPOS	LDX	0,X
+	STX	W66
+	STAA	W68
+	BNE	DIVPOS0
+	STAB	W68		;	W68 <<= 8
+	STAA	W68+1		;	clear W68+1
+	LDX	#8		;
+	BRA	DIVPOS1
+DIVPOS0	STAB	W68+1
+	LDX	#16		; 3 3
+	CLRA			; 2 1	7cycle for preparation
+DIVPOS1 CLRB			; 2 1
+DIVPOS2 ASL	W68+1		; 6 3
+	ROL	W68		; 6 3
+	ROLB			; 2 1
+	ROLA			; 2 1
+	SUBB	W66+1		; 3 2
+	SBCA	W66		; 3 2
+	BCS	DIVPOS3	; 4 2	↑26cycle
+	INC	W68+1		; 6 3
+	DEX			; 4 1
+	BNE	DIVPOS2	   	; 4 2	+14cycle => 40cycle/loop => 640cycle for 16bit repetitions
+	RTS			; 5 1	5cycle
+DIVPOS3 ADDB	W66+1		; 3 2
+	ADCA	W66		; 3 2
+	DEX			; 4 1
+	BNE	DIVPOS2		; 4 2	+14cycle => 40cycle/loop => 640cycle for 16bit repetitions
+	RTS			; 5 1	5cycle
 TD1	CLC
 	RTS
 TD20	PULB
@@ -1134,7 +1125,9 @@ DV3	PULA
 	BPL	DV4
 	DEC	W82+5
 	BSR	NEGAB
-DV4	JSR	DIVPOS
+DV4	STX	W6C
+	JSR	DIVPOS
+	LDX	W6C
 	STAA	W4E
 	STAB	W4E+1
 	LDAA	W68
@@ -1696,6 +1689,17 @@ INIT_MUSIC  CLR	$00C4
 	CLR $00CB
 	DEC $00CB
 	RTS
+*
+*** CONSTANT FOR 2-10 ***
+*
+CTABLE	FDB	10000
+	FDB	1000
+	FDB	100
+	FDB	10
+CTABLEE	FDB	1
+	IF	W66>=$100
+	FDB	0	    ; 次のCLR命令がEXTENDで7F0066であることを期待していた
+	ENDIF
 *
 	IF	&BASICROM
 	ORG	$C000
