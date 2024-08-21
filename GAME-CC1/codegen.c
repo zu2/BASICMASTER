@@ -82,6 +82,10 @@ void	TSTB()
 {
 		printf("\tTSTB\n");
 }
+void	TST_X(int v)
+{
+		printf("\tTST\t%d,X\n",v);
+}
 void	INCA()
 {
 		printf("\tINCA\n");
@@ -200,17 +204,62 @@ void	ABSD()
 		LABEL(positive);
 }
 
+void	TAB()
+{
+		printf("\tTAB\n");
+}
+void	TBA()
+{
+		printf("\tTBA\n");
+}
+void	CLRA()
+{
+		printf("\tCLRA\n");
+}
+void	CLRB()
+{
+		printf("\tCLRB\n");
+}
+void	LDAA_I(int v)
+{
+		printf("\tLDAA\t#%d\n",v);
+}
+void	LDAA_V(char *str)
+{
+		printf("\tLDAA\t_%s\n",str);
+}
+void	LDAA_X(int v)
+{
+		printf("\tLDAA\t%d,X\n",v);
+}
+void	LDAB_I(int v)
+{
+		printf("\tLDAB\t#%d\n",v);
+}
+void	LDAB_V(char *str)
+{
+		printf("\tLDAB\t_%s+1\n",str);
+}
+void	LDAB_X(int v)
+{
+		printf("\tLDAB\t%d,X\n",v);
+}
 void	LDD_I(int v)
 {
+		if(v!=0 && high(v)==low(v)){
+			LDAB_I(low(v));
+			TBA();
+			return;
+		}
 		if(low(v)==0){
-			printf("\tCLRB\n");
+			CLRB();
 		}else{
-			printf("\tLDAB\t#%d\n", low(v));
+			LDAB_I(low(v));
 		}
 		if(high(v)==0){
-			printf("\tCLRA\n");
+			CLRA();
 		}else{
-			printf("\tLDAA\t#%d\n", high(v));
+			LDAA_I(high(v));
 		}
 }
 void	LDD_IV(char *v)
@@ -342,22 +391,6 @@ void	EOR_L(char *v)
 		printf("\tEORA\t%s\n",		v);
 }
 
-void	TAB()
-{
-		printf("\tTAB\n");
-}
-void	TBA()
-{
-		printf("\tTBA\n");
-}
-void	CLRA()
-{
-		printf("\tCLRA\n");
-}
-void	CLRB()
-{
-		printf("\tCLRB\n");
-}
 void	CLRD()
 {
 		CLRB();
@@ -423,22 +456,6 @@ void	STD_L(char *str)
 {
 		printf("\tSTAB\t%s+1\n",str);
 		printf("\tSTAA\t%s\n",	str);
-}
-void	LDAB_I(int v)
-{
-		printf("\tLDAB\t#%d\n",v);
-}
-void	LDAA_V(char *str)
-{
-		printf("\tLDAB\t_%s\n",str);
-}
-void	LDAB_V(char *str)
-{
-		printf("\tLDAB\t_%s+1\n",str);
-}
-void	LDAB_X(int v)
-{
-		printf("\tLDAB\t%d,X\n",v);
 }
 void	STAB_X(int v)
 {
@@ -1405,7 +1422,7 @@ void gen_expr(Node *node)
 			return;
 	// 数値
 	case ND_NUM:
-			LDD_I(node->val);
+			LDD_I(node->val);			// LDD_Iの中でoptimizeしている
 			return;
 	case ND_PGEND:
 			LDD_IV("LPGEND");
@@ -1529,6 +1546,19 @@ void gen_expr(Node *node)
 			}
 			break;
 	case ND_MUL:
+			if(isCompare(node->lhs)){	// 比較演算結果との乗算 ex. (x>=y)*32
+				char *label = new_label();
+				gen_expr(node->lhs);
+				PSHD();
+				gen_expr(node->rhs);
+				TSX();
+				TST_X(1);				// 1 or 0
+				Bxx("NE",label);		// if 1, rhs is result.
+				CLRD();					// otherwise 0
+				LABEL(label);
+				INS2();
+				return;
+			}
 			if(isNUM(node->rhs)){
 				int	shift=0;
 				switch(node->rhs->val){
@@ -1735,9 +1765,14 @@ gen_stmt(Node *node)
 	//printf("gen_stmt node->kind=%d\n",node->kind);fflush(stdout);
 	printf("; ");print_nodes_ln(node);
 	switch(node->kind){
+	case ND_NOP:	// no operation
+		return;
 	case ND_LINENUM:
 //		printf("*\t");print_line(node->str);printf("\n");
-		LABEL(new_line_label(node->val));
+		// IF/GOTO/GOSUBの飛び先として使われていない行番号はラベルにしない
+		if(usedLINENO(node->val)){
+			LABEL(new_line_label(node->val));
+		}
 		current = node;
 		return;
 	case ND_ASM: {
@@ -1997,7 +2032,7 @@ gen_stmt(Node *node)
 		}else{
 			gen_stmt(opt);
 		}
-		LDD_V(node->str);
+		LDD_V(node->str);			// これ消せそうだが...
 		SUB_L(TO_LABEL);
 		Bxx("GT",NEXT_LABEL);
 		Bxx("NE",to_FOR);
@@ -2080,6 +2115,81 @@ gen_stmt(Node *node)
 			STD_V(node->str);
 		}
 		return;
+	case ND_SETVAR_N:
+		if(isNUMorVAR(node->rhs) && node->lhs->kind==ND_CELL){	// 定数/変数の連続代入
+			if(isNUM(node->rhs)){
+				LDX_I(node->rhs->val);
+			}else{
+				LDX_V(node->rhs->str);
+			}
+			Node	*p = node->lhs;
+			while(p->kind==ND_CELL){
+				if(!isVAR(p->lhs)){
+					error("; ND_SETVAR error. not Variable\n");
+				}
+				STX_V(p->lhs->str);
+				p = p->rhs;
+			}
+			return;
+		}
+		error("; unknown ND_SETVAR pattern\n");
+		break;
+	case ND_SETARY1_N: {
+		// ; (ND_SETARY1_N (ND_ARRAY1 str=B (ND_NUM 0)) (((ND_NUM 0) (ND_NUM 138)) ((ND_NUM 1) (ND_NUM 148))((ND_NUM 2) (ND_NUM 136))))
+			Node	*p = node->rhs;
+			LDX_V(node->lhs->str);
+			Node	*prev=new_node_none();
+			while(p->kind==ND_CELL){
+				Node	*lhs = p->lhs;
+//				printf("; SETARY1_N ");print_nodes(prev);printf(" ");print_nodes_ln(p);
+				if(!isNUM(lhs->lhs) && !isNUMorVAR(lhs->rhs)){
+					error("; illegal ND_SETARY1 parameter\n");
+				}
+				if(isNUM(lhs->rhs)){
+					if(!isNUM(prev) || (prev->val!=lhs->rhs->val)){
+						LDAB_I(lhs->rhs->val);
+					}
+				}else{
+					if(!isVAR(prev) || strcmp(prev->str,lhs->rhs->str)!=0){
+						LDAB_V(lhs->rhs->str);
+					}
+				}
+				STAB_X(lhs->lhs->val);
+				prev = p->lhs->rhs;
+				p = p->rhs;
+			}
+			return;
+		}
+		error("; unknown ND_SETARY1 pattern\n");
+		break;
+	case ND_SETARY2_N: {
+		// ; (ND_SETARY2_N (ND_ARRAY1 str=B (ND_NUM 0)) (((ND_NUM 0) (ND_NUM 138)) ((ND_NUM 1) (ND_NUM 148))((ND_NUM 2) (ND_NUM 136))))
+			Node	*p = node->rhs;
+			LDX_V(node->lhs->str);
+			Node	*prev=new_node_none();
+			while(p->kind==ND_CELL){
+				Node	*lhs = p->lhs;
+				printf("; SETARY2_N ");print_nodes(prev);printf(" ");print_nodes_ln(p);
+				if(!isNUM(lhs->lhs) && !isNUMorVAR(lhs->rhs)){
+					error("; illegal ND_SETARY2 parameter\n");
+				}
+				if(isNUM(lhs->rhs)){
+					if(!isNUM(prev) || (prev->val!=lhs->rhs->val)){
+						LDD_I(lhs->rhs->val);
+					}
+				}else{
+					if(!isVAR(prev) || strcmp(prev->str,lhs->rhs->str)!=0){
+						LDD_V(lhs->rhs->str);
+					}
+				}
+				STD_X(lhs->lhs->val*2);
+				prev = p->lhs->rhs;
+				p = p->rhs;
+			}
+			return;
+		}
+		error("; unknown ND_SETARY2 pattern\n");
+		break;
 	case ND_SETTIMER:
 		if(isNUM(node->lhs)){
 			LDX_I(node->lhs->val);

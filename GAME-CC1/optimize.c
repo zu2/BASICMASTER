@@ -172,6 +172,10 @@ Node	*node_opt(Node	*old)
 		}
 	}else if(node->kind==ND_MUL){
 //		printf("; optimize ND_MUL\n");
+		if(isCompare(node->lhs) && isCompare(node->rhs)){	// 比較演算の結果の乗算 {0,1}*{0,1}
+//			printf("; optimize ND_MUL Multiplication of the results of comparison operations\n");
+			return new_binary(ND_BITAND, node->lhs, node->rhs);
+		}
 		if(isNUM(node->lhs) && isNUM(node->rhs)){
 			return new_node_num(node->lhs->val * node->rhs->val);
 		}
@@ -210,7 +214,8 @@ Node	*node_opt(Node	*old)
 			case 10:	return new_ASLD(new_binary(ND_ADD, new_ASLD(node->lhs,2),node->lhs),1);
 			default:	break;
 			}
-		}	// 左辺が式の場合は一時領域が必要なので、ここでは最適化できない。残念
+		}
+		// 左辺が式の場合は一時領域が必要なので、ここでは最適化できない。残念
 		return	node;
 	}else if(node->kind==ND_DIV){
 #if	0
@@ -325,4 +330,161 @@ Node	*node_opt(Node	*old)
 		}
 	}
 	return	node;
+}
+
+//
+//	Multi-Statement Optimization
+//
+void mso_sub(int lineno,int i)
+{
+	// 定数代入の連続 (ND_SETVAR str=E (ND_NUM 0))
+	if(code[i]->kind==ND_SETVAR && isNUM(code[i]->lhs)){
+		int	val = code[i]->lhs->val;
+		int j=0;
+		for(j=i+1;code[j];j++){
+			if(code[j]->kind==ND_SETVAR
+			&& isNUM(code[j]->lhs)
+			&& (code[j]->lhs->val==val)){
+//				printf("; continuous same constant assignment found  on line %d\n",lineno);
+				continue;
+			}
+			break;
+		}
+		// 抜けてきたときにj>i+1なら最適化対象
+		if(j>i+1){
+//			printf("; continuous same constant assignment %d from line %d\n",j-i,lineno);
+			Node	*node = new_node(ND_SETVAR_N);
+			Node	*rhs_node = node;
+			for(int k=i; k<j && code[k]->kind==ND_SETVAR; k++){
+				Node *var = new_unary(ND_CELL,new_node_var(code[k]->str));
+				rhs_node->rhs = var;
+				rhs_node = var;
+				code[k]->kind = ND_NOP;
+			}
+			rhs_node->rhs = new_node_none();
+			node->lhs = node->rhs;		// ToDo: あとで書き換える
+			node->rhs = code[i]->lhs;
+//			printf("; ");print_nodes_ln(node);
+			code[i]=node;
+		}
+	}else if(code[i]->kind==ND_SETVAR // 同一変数代入の連続 (ND_SETVAR str=E (ND_NUM 0))
+	&& isVAR(code[i]->lhs)){
+		char *str = code[i]->lhs->str;
+		int j=0;
+		for(j=i+1;code[j];j++){
+			if(code[j]->kind==ND_SETVAR
+			&& isVAR(code[j]->lhs)
+			&& (strcmp(code[j]->lhs->str,str)==0)){
+//				printf("; continuous same variable assignment found  on line %d\n",lineno);
+				continue;
+			}
+			break;
+		}
+		// 抜けてきたときにj>i+1なら最適化対象
+		if(j>i+1){
+//			printf("; continuous same constant assignment %d from line %d\n",j-i,lineno);
+			Node	*node = new_node(ND_SETVAR_N);
+			Node	*rhs_node = node;
+			for(int k=i; k<j && code[k]->kind==ND_SETVAR; k++){
+				Node *var = new_unary(ND_CELL,new_node_var(code[k]->str));
+				rhs_node->rhs = var;
+				rhs_node = var;
+				code[k]->kind = ND_NOP;
+			}
+			rhs_node->rhs = new_node_none();
+			node->lhs = node->rhs;		// ToDo: あとで書き換える
+			node->rhs = code[i]->lhs;
+//			printf("; ");print_nodes_ln(node);
+			code[i]=node;
+		}
+	}else if(code[i]->kind==ND_ASSIGN // (ND_ASSIGN (ND_ARRAY1 str=B (ND_NUM 0)) (ND_NUM 138))
+		&&   code[i]->lhs->kind==ND_ARRAY1
+		&&   isNUM(code[i]->lhs->lhs) && isNUMorVAR(code[i]->rhs)
+		&&   (code[i]->lhs->lhs->val>=0) && (code[i]->lhs->lhs->val<255)){
+		char *var = code[i]->lhs->str;
+		int j=0;
+		for(j=i+1;code[j];j++){
+			if(code[j]->kind==ND_ASSIGN
+			&& code[j]->lhs->kind==ND_ARRAY1
+			&& strcmp(var,code[j]->lhs->str)==0
+			&& isNUM(code[j]->lhs->lhs) && isNUM(code[j]->rhs)
+			&& (code[j]->lhs->lhs->val>=0) && (code[j]->lhs->lhs->val<255)){
+//				printf("; continuous same ARRAY1 assignment found %d on line %d, %s:%d)=%d\n",j,lineno,var,code[j]->lhs->lhs->val,code[j]->rhs->val);
+				continue;
+			}
+			break;
+		}
+		// 抜けてきたときにj>i+1なら最適化対象
+		if(j>i+1){
+			// (ND_ASSIGN (ND_ARRAY1 str=B (ND_NUM 0)) (ND_NUM 138))
+//			printf("; continuous same ARRAY1 assignment found %d-%d on line %d, %s:%d)=%d\n",i,j-1,lineno,var,code[i]->lhs->lhs->val,code[i]->rhs->val);
+			Node	*node = new_node(ND_SETARY1_N);
+			node->lhs = code[i]->lhs;		// lhsはそのまま下げる。lhs->lhsは不要だがそのまま
+			char	*str = code[i]->lhs->str;
+			Node	*rhs_node = node;
+			for(int k=i; k<j && code[k]->kind==ND_ASSIGN; k++){
+//				printf("; new pair ");print_nodes(code[k]->lhs->lhs);print_nodes_ln(code[k]->rhs);
+				Node *pair = new_binary(ND_CELL,code[k]->lhs->lhs,code[k]->rhs); // offset,valのペア
+//				printf("; pair ");print_nodes_ln(pair);
+				Node *cell = new_unary(ND_CELL,pair);
+//				printf("; cell ");print_nodes_ln(cell);
+				rhs_node->rhs = cell;
+				rhs_node = cell;
+				code[k]->kind = ND_NOP;
+			}
+//			printf("; ");print_nodes_ln(node);
+			code[i]=node;
+		}
+	}else if(code[i]->kind==ND_ASSIGN // (ND_ASSIGN (ND_ARRAY1 str=B (ND_NUM 0)) (ND_NUM 138))
+		&&   code[i]->lhs->kind==ND_ARRAY2
+		&&   isNUM(code[i]->lhs->lhs) && isNUMorVAR(code[i]->rhs)
+		&&   (code[i]->lhs->lhs->val>=0) && (code[i]->lhs->lhs->val<127)){
+		char *var = code[i]->lhs->str;
+		int j=0;
+		for(j=i+1;code[j];j++){
+			if(code[j]->kind==ND_ASSIGN
+			&& code[j]->lhs->kind==ND_ARRAY2
+			&& strcmp(var,code[j]->lhs->str)==0
+			&& isNUM(code[j]->lhs->lhs) && isNUM(code[j]->rhs)
+			&& (code[j]->lhs->lhs->val>=0) && (code[j]->lhs->lhs->val<127)){
+//				printf("; continuous same ARRAY1 assignment found %d on line %d, %s:%d)=%d\n",j,lineno,var,code[j]->lhs->lhs->val,code[j]->rhs->val);
+				continue;
+			}
+			break;
+		}
+		// 抜けてきたときにj>i+1なら最適化対象
+		if(j>i+1){
+			// (ND_ASSIGN (ND_ARRAY1 str=B (ND_NUM 0)) (ND_NUM 138))
+			printf("; continuous same ARRAY1 assignment found %d-%d on line %d, %s:%d)=%d\n",i,j-1,lineno,var,code[i]->lhs->lhs->val,code[i]->rhs->val);
+			Node	*node = new_node(ND_SETARY2_N);
+			node->lhs = code[i]->lhs;		// lhsはそのまま下げる。lhs->lhsは不要だがそのまま
+			char	*str = code[i]->lhs->str;
+			Node	*rhs_node = node;
+			for(int k=i; k<j && code[k]->kind==ND_ASSIGN; k++){
+				printf("; new pair ");print_nodes(code[k]->lhs->lhs);print_nodes_ln(code[k]->rhs);
+				Node *pair = new_binary(ND_CELL,code[k]->lhs->lhs,code[k]->rhs); // offset,valのペア
+				printf("; pair ");print_nodes_ln(pair);
+				Node *cell = new_unary(ND_CELL,pair);
+				printf("; cell ");print_nodes_ln(cell);
+				rhs_node->rhs = cell;
+				rhs_node = cell;
+				code[k]->kind = ND_NOP;
+			}
+			printf("; ");print_nodes_ln(node);
+			code[i]=node;
+		}
+	}
+}
+
+void
+multi_statement_optimize()
+{
+	int lineno;
+	for(int i=0; code[i]; i++){
+		if(code[i]->kind==ND_LINENUM){
+			lineno = code[i]->val;
+			continue;
+		}
+		mso_sub(lineno,i);
+	}
 }

@@ -151,11 +151,43 @@ print_setvar_node(char *name,Node *node){
 	printf(")");
 }
 void
+print_setvar_n_node(char *name,Node *node){
+	printf("(%s ",name);
+	print_nodes(node->lhs);
+	printf(" ");
+	print_nodes(node->rhs);
+	printf(")");
+}
+void
+print_setary_n_node(char *name,Node *node){
+	printf("(%s ",name);
+	print_nodes(node->lhs);
+	printf(" ");
+	print_nodes(node->rhs);
+	printf(")");
+}
+void
 print_unary_val_node(char *name,Node *node)
 {
 	printf("(%s ",name);
 	print_nodes(node->lhs);
 	printf(" val=%d)",node->val);
+}
+void
+print_cell_node(Node *node)
+{
+	Node *rhs = node->rhs;
+	printf("(");
+	print_nodes(node->lhs);
+	printf(" ");
+	while(rhs->kind==ND_CELL){
+		print_nodes(rhs->lhs);
+		rhs = rhs->rhs;
+	}
+	if(rhs->kind!=ND_NONE){
+		print_nodes(rhs);
+	}
+	printf(")");
 }
 
 void
@@ -164,8 +196,14 @@ print_nodes(Node *node)
 	if(node==NULL){
 		error("print_nodes: Node is NULL");
 	}
+	Node	*lhs = node->lhs;
+	Node	*rhs = node->rhs;
+	int		val = node->val;
+	char	*str = node->str;
 	switch(node->kind){
 	case ND_NONE:		printf("ND_NONE");break;
+	case ND_CELL:		print_cell_node(node);break;
+	case ND_NOP:		printf("(ND_NOP)");break;
 	case ND_ADD:		print_binary_node("+",node);break;
 	case ND_SUB:		print_binary_node("-",node);break;
 	case ND_MUL:		print_binary_node("*",node);break;		
@@ -181,13 +219,13 @@ print_nodes(Node *node)
 	case ND_VAR:		print_var_node("ND_VAR",node);break;
 	case ND_ARRAY1:		print_array_node("ND_ARRAY1",node);break;
 	case ND_ARRAY2:		print_array_node("ND_ARRAY2",node);break;
-	case ND_NUM:		printf("(ND_NUM %d)",node->val);break;
+	case ND_NUM:		printf("(ND_NUM %d)",val);break;
 	case ND_ASSIGN:		print_binary_node("ND_ASSIGN",node);break;
 	case ND_IF:			print_unary_node("ND_IF",node);break;
-	case ND_GOTO:		printf("(ND_GOTO %d)",node->val);break;
-	case ND_GOSUB:		printf("(ND_GOSUB %d)",node->val);break;
+	case ND_GOTO:		printf("(ND_GOTO %d)",val);break;
+	case ND_GOSUB:		printf("(ND_GOSUB %d)",val);break;
 	case ND_RETURN:		printf("ND_RETURN ");break;
-	case ND_LINENUM:	printf("(ND_LINENUM %d '%s')",node->val,node->str);break;
+	case ND_LINENUM:	printf("(ND_LINENUM %d '%s')",val,str);break;
 	case ND_SETRAM:		print_unary_node("ND_SETRAM",node);break;
 	case ND_PRINT:		print_unary_node("ND_PRINT",node);break;
 	case ND_PRINTR:		print_binary_node("ND_PRINTR",node);break;
@@ -196,25 +234,25 @@ print_nodes(Node *node)
 	case ND_PRINTTAB:	print_unary_node("ND_PRINTTAB",node);break;
 	case ND_PRINTCR:	printf("(ND_PRINTCR)");break;
 	case ND_PRINTCH:	print_unary_node("ND_PRINTCH ",node);break;
-	case ND_PRINTSTR:	printf("(ND_PRINTSTR '%s')",node->str);break;
+	case ND_PRINTSTR:	printf("(ND_PRINTSTR '%s')",str);break;
 	case ND_CALL:		printf("(ND_CALL)");break;
 	case ND_CALLVAL:	printf("(ND_CALLVAL)");break;	// 機械語から戻ったときのAccAB
-	case ND_UNTIL:		printf("(ND_UNTIL label=%d ",node->val);
-						print_nodes(node->lhs);printf(")");
+	case ND_UNTIL:		printf("(ND_UNTIL label=%d ",val);
+						print_nodes(lhs);printf(")");
 						break;
-	case ND_DO:			printf("(ND_DO label=%d)",node->val);break;
-	case ND_NEXT:		printf("(ND_NEXT label=%d str=%s ",node->val,node->str);
-						print_nodes(node->lhs);
+	case ND_DO:			printf("(ND_DO label=%d)",val);break;
+	case ND_NEXT:		printf("(ND_NEXT label=%d str=%s ",val,str);
+						print_nodes(lhs);
 						printf(")");
 						break;
-	case ND_FOR:		printf("(ND_FOR str=%s label=%d ",node->str,node->val);
-						print_nodes(node->lhs);
+	case ND_FOR:		printf("(ND_FOR str=%s label=%d ",str,val);
+						print_nodes(lhs);
 						printf(" ");
-						print_nodes(node->rhs);
+						print_nodes(rhs);
 						printf(")");
 						break;
-	case ND_SETRAND:	printf("(ND_SETRAND ");print_nodes(node->lhs);break;
-	case ND_REM:		printf("(ND_REM str=\"%s\")",node->str);break;
+	case ND_SETRAND:	printf("(ND_SETRAND ");print_nodes(lhs);break;
+	case ND_REM:		printf("(ND_REM str=\"%s\")",str);break;
 	case ND_PGEND:		printf("(ND_PGEND ");break;
 	case ND_RAND:		print_unary_node("ND_RAND",node);break;
 	case ND_MOD:		print_unary_node("ND_MOD",node);break;
@@ -223,16 +261,19 @@ print_nodes(Node *node)
 	case ND_SETTIMER:	print_unary_node("ND_SETTIMER",node);break;
 	case ND_INPUT:		printf("(ND_INPUT)");break;
 	case ND_CURSOR:		printf("(ND_CURSOR)");break;
-	case ND_SETCURSOR:	printf("(ND_SETCURSOR ");print_nodes(node->lhs);printf(")");break;
+	case ND_SETCURSOR:	printf("(ND_SETCURSOR ");print_nodes(lhs);printf(")");break;
 	case ND_CURSORADRS:	printf("(ND_CURSORADRS)");break;
-	case ND_SETCURSORADRS:printf("(ND_SETCURSORADRS ");print_nodes(node->lhs);printf(")");break;
-	case ND_MUSIC:		printf("(ND_MUSIC str='%s' )",node->str);break;
+	case ND_SETCURSORADRS:printf("(ND_SETCURSORADRS ");print_nodes(lhs);printf(")");break;
+	case ND_MUSIC:		printf("(ND_MUSIC str='%s' )",str);break;
 	case ND_KEYBOARD:	printf("(ND_KEYBOARD)");break;
 	case ND_BITAND:		print_binary_node("BITAND",node);break;
 	case ND_BITOR:		print_binary_node("BITOR",node);break;
 	case ND_BITXOR:		print_binary_node("BITXOR",node);break;
 	// 以下、オプティマイズ用
 	case ND_SETVAR:		print_setvar_node("ND_SETVAR",node);break;
+	case ND_SETVAR_N:	print_setvar_n_node("ND_SETVAR_N",node);break;
+	case ND_SETARY1_N:	print_setary_n_node("ND_SETARY1_N",node);break;
+	case ND_SETARY2_N:	print_setary_n_node("ND_SETARY2_N",node);break;
 	case ND_ASLD:		print_unary_val_node("ND_ASLD",node);break;
 	case ND_ANDI:		print_unary_val_node("ND_ANDI",node);break;
 	case ND_ANDI_MOD:	print_unary_val_node("ND_ANDI_MOD",node);break;
@@ -241,8 +282,8 @@ print_nodes(Node *node)
 	case ND_DECVAR:		print_var_node("ND_DECVAR",node);break;
 	case ND_INC2VAR:	print_var_node("ND_INC2VAR",node);break;
 	case ND_DEC2VAR:	print_var_node("ND_DEC2VAR",node);break;
-	case ND_ASM:		printf("(ND_ASM str=\"%s\")",node->str);break;
-	case ND_IFGOTO:		printf("(ND_IFGOTO val=%d ",node->val);print_nodes(node->lhs);printf(")");break;
+	case ND_ASM:		printf("(ND_ASM str=\"%s\")",str);break;
+	case ND_IFGOTO:		printf("(ND_IFGOTO val=%d ",val);print_nodes(lhs);printf(")");break;
 	default:
 			printf(";unknown node kind %d\n",node->kind);
 			break;
@@ -263,12 +304,15 @@ int line_count=0;
 typedef	struct {
 	int		n;
 	char	*s;
+	int		used;
 } line_t;
 line_t LINENO[10000];
 
+// 追加はtokenize時点で行われる
 void add_LINENO(int n,char *s){
 	LINENO[line_count].n = n;
 	LINENO[line_count].s = s;
+	LINENO[line_count].used = 0;
 	line_count++;
 }
 
@@ -278,11 +322,27 @@ char *existLINENO(int v)
 	for(int i=0; i<line_count; i++){
 //		printf("; line %d\n",LINENO[i].n);
 		if(LINENO[i].n==v){
+			LINENO[i].used=1;
 			return LINENO[i].s;
 		}
 	}
 	if(v==1) return "OK";
+	if(v==65535) return "OK";
 	return NULL;
+}
+// LINE number used?
+int usedLINENO(int v)
+{
+//	printf("; search linenumber %d\n",v);
+	for(int i=0; i<line_count; i++){
+//		printf("; line %d\n",LINENO[i].n);
+		if(LINENO[i].n==v){
+			return LINENO[i].used;
+		}
+	}
+	if(v==1) return 1;
+	if(v==65535) return 1;
+	return 0;
 }
 
 char	*

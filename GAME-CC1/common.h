@@ -72,29 +72,31 @@ extern	char *user_input;
 
 // 抽象構文木のノードの種類
 typedef enum {
-	ND_NONE,	//	0
-	ND_ADD,		//	1	+	
-	ND_SUB,		//	2	-
-	ND_MUL,		//	3	*
-	ND_DIV,		//	4	/
-	ND_ABS,		//	5	+ 絶対値(単項+)
-	ND_NEG,		//	6	- 単項
-	ND_EQ,		//	7	=
-	ND_NE,		//	8	!=
-	ND_LT,		//	9	<
-	ND_LE,		//	10	<= 
-	ND_GT,		//	11	>
-	ND_GE,		//	12	>= 
-	ND_VAR,		//	13	変数（左辺値）
-	ND_ARRAY1,	//	14	配列（左辺値）
-	ND_ARRAY2,	//	15	配列（左辺値）
-	ND_NUM,		//	16	整数
-	ND_ASSIGN,	//	17	代入
-	ND_IF,		//	18	;=
-	ND_GOTO,	//	19	u=
-	ND_GOSUB,	//	20	!=
-	ND_RETURN,	//	21	]
-	ND_LINENUM,	//	22
+	ND_NONE,	//
+	ND_CELL,	//
+	ND_NOP,		//
+	ND_ADD,		//	+	
+	ND_SUB,		//	-
+	ND_MUL,		//	*
+	ND_DIV,		//	/
+	ND_ABS,		//	+ 絶対値(単項+)
+	ND_NEG,		//	- 単項
+	ND_EQ,		//	=
+	ND_NE,		//	!=
+	ND_LT,		//	<
+	ND_LE,		//	<= 
+	ND_GT,		//	>
+	ND_GE,		//	>= 
+	ND_VAR,		//	変数（左辺値）
+	ND_ARRAY1,	//	配列（左辺値）
+	ND_ARRAY2,	//	配列（左辺値）
+	ND_NUM,		//	整数
+	ND_ASSIGN,	//	代入
+	ND_IF,		//	;=
+	ND_GOTO,	//	u=
+	ND_GOSUB,	//	!=
+	ND_RETURN,	//	]
+	ND_LINENUM,	//
 	ND_SETRAM,
 	ND_PRINT,
 	ND_PRINTR,
@@ -131,6 +133,9 @@ typedef enum {
 	ND_MUSIC,	//
 //	以下オプティマイズ用
 	ND_SETVAR,
+	ND_SETVAR_N,
+	ND_SETARY1_N,
+	ND_SETARY2_N,
 	ND_ASLD,
 	ND_ANDI,
 	ND_ANDI_MOD,
@@ -178,6 +183,8 @@ Token	*tokenize();
 Token *new_token(TokenKind kind, Token *cur, char *str,int len);
 void program();
 void print_program();
+char *existLINENO(int v);
+int usedLINENO(int v);
 //
 // from optimize.c
 //
@@ -194,6 +201,7 @@ int		isARRAY(Node *node);
 int		isSameARRAY(Node *x,Node *y);
 int		isADDorSUB(Node *node);
 Node	*node_opt(Node *node);
+void	multi_statement_optimize();
 
 //
 // from codegen.c

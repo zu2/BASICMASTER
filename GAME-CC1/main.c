@@ -41,6 +41,7 @@ int main(int argc, char **argv)
 
 	Node	*prev = NULL;
 	Node	*last = NULL;
+	Node	*current = NULL;
 	for(int i=0; code[i]; i++){
 		if(code[i]->kind == ND_LINENUM){
 			if(prev!=NULL){
@@ -50,17 +51,30 @@ int main(int argc, char **argv)
 			prev = code[i];
 		}
 	}
+	for(int i=0; code[i]; i++){
+		if(code[i]->kind == ND_LINENUM){
+			current = code[i];
+		}
+		if((code[i]->kind==ND_IF)
+		|| (code[i]->kind==ND_IFGOTO)){
+//			printf("; ND_IF found on line no %d\n",current->val);
+//			printf("; set next line number %d is 'used'.\n",current->rhs->val);
+			existLINENO(current->rhs->val);
+		}
+	}
 	prev->rhs = new_node(ND_LINENUM);
 	prev->rhs->val = 0;
 	for(int i=0; code[i]; i++){
 //		printf("; gen code[%d] start:\n",i);
 //		printf(";   ");print_nodes(code[i]);printf("\n");
-		Node *opt=node_opt(code[i]);
+		code[i]=node_opt(code[i]);
 //		printf(";=> ");print_nodes(opt);printf("\n");
-		gen_stmt(opt);
-//		printf(";gen code[%d] end\n",i);
 	}
-
+	multi_statement_optimize();
+	for(int i=0; code[i]; i++){
+//		printf(";gen code[%d] end\n",i);
+		gen_stmt(node_opt(code[i]));
+	}
 	epilogue();
 	return 0;
 }
