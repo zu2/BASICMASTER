@@ -100,6 +100,33 @@ Node	*new_ANDI_MOD(Node *node, int mask)
 		return node;
 }
 
+//
+// Does the formula have side effects?
+//
+int	has_side_effect(Node *node)
+{
+	Node	*old = node;
+	switch(node->kind){
+	case ND_NONE:
+	case ND_VAR:
+	case ND_NUM:
+	case ND_LINENUM:
+	case ND_PRINTCR:
+		return 0;
+	case ND_DIV:
+	case ND_INKEY:	// $
+	case ND_INPUT:	// ?
+	case ND_TIMER:
+	case ND_CURSOR:
+	case ND_CURSORADRS:
+	case ND_KEYBOARD:
+		return 1;
+	default:
+		break;
+	}
+	return has_side_effect(node->lhs) || has_side_effect(node->rhs);
+}
+
 Node	*node_opt(Node	*old)
 {
 	static	int	cc=0;
@@ -319,172 +346,33 @@ Node	*node_opt(Node	*old)
 			opt->str = node->str;
 			return opt;
 		}
-	}else if(isEQorNE(node)){		// ==, !== の定数・変数との比較は入れ替えておくと後が楽
-		if((isNUM(node->lhs) && !isNUM(node->rhs))
-		|| (isVAR(node->lhs) && !isNUM(node->rhs) && !isVAR(node->rhs))){
-			Node	*opt = new_copy_node(node);
-			opt->lhs = node->rhs;
-			opt->rhs = node->lhs;
-			return opt;
-			return	opt;
-		}
+	}else if(node->kind==ND_GT && isNUM(node->rhs)){ // (> expr 97) -> (>= expr 98)
+		//	GT => GE
+		Node *opt = new_copy_node(node);
+		Node *num = new_copy_node(node->rhs);
+		num->val = num->val+1;
+		opt->kind = ND_GE;
+		opt->rhs = num;
+//		printf(";     ");print_nodes_ln(node);
+//		printf("; => ");print_nodes_ln(opt);
+		return node_opt(opt);
+	}else if(node->kind==ND_LE && isNUM(node->rhs)){ // (<= expr 97) -> (< expr 98)
+		// LE => LTにする
+		Node *opt = new_copy_node(node);
+		Node *num = new_copy_node(node->rhs);
+		num->val = num->val+1;
+		opt->kind = ND_LT;
+		opt->rhs = num;
+//		printf(";     ");print_nodes_ln(node);
+//		printf("; => ");print_nodes_ln(opt);
+		return node_opt(opt);
+	}else if(isCompare(node)		// 比較演算は右を定数・変数にする
+		&&  ( (isNUM(node->lhs) && !isNUM(node->rhs))
+			||(isVAR(node->lhs) && !isNUMorVAR(node->rhs)))){
+		Node	*opt = new_copy_node(node);
+		opt->lhs = node->rhs;
+		opt->rhs = node->lhs;
+		return node_opt(opt);
 	}
 	return	node;
-}
-
-//
-//	Multi-Statement Optimization
-//
-void mso_sub(int lineno,int i)
-{
-	// 定数代入の連続 (ND_SETVAR str=E (ND_NUM 0))
-	if(code[i]->kind==ND_SETVAR && isNUM(code[i]->lhs)){
-		int	val = code[i]->lhs->val;
-		int j=0;
-		for(j=i+1;code[j];j++){
-			if(code[j]->kind==ND_SETVAR
-			&& isNUM(code[j]->lhs)
-			&& (code[j]->lhs->val==val)){
-//				printf("; continuous same constant assignment found  on line %d\n",lineno);
-				continue;
-			}
-			break;
-		}
-		// 抜けてきたときにj>i+1なら最適化対象
-		if(j>i+1){
-//			printf("; continuous same constant assignment %d from line %d\n",j-i,lineno);
-			Node	*node = new_node(ND_SETVAR_N);
-			Node	*rhs_node = node;
-			for(int k=i; k<j && code[k]->kind==ND_SETVAR; k++){
-				Node *var = new_unary(ND_CELL,new_node_var(code[k]->str));
-				rhs_node->rhs = var;
-				rhs_node = var;
-				code[k]->kind = ND_NOP;
-			}
-			rhs_node->rhs = new_node_none();
-			node->lhs = node->rhs;		// ToDo: あとで書き換える
-			node->rhs = code[i]->lhs;
-//			printf("; ");print_nodes_ln(node);
-			code[i]=node;
-		}
-	}else if(code[i]->kind==ND_SETVAR // 同一変数代入の連続 (ND_SETVAR str=E (ND_NUM 0))
-	&& isVAR(code[i]->lhs)){
-		char *str = code[i]->lhs->str;
-		int j=0;
-		for(j=i+1;code[j];j++){
-			if(code[j]->kind==ND_SETVAR
-			&& isVAR(code[j]->lhs)
-			&& (strcmp(code[j]->lhs->str,str)==0)){
-//				printf("; continuous same variable assignment found  on line %d\n",lineno);
-				continue;
-			}
-			break;
-		}
-		// 抜けてきたときにj>i+1なら最適化対象
-		if(j>i+1){
-//			printf("; continuous same constant assignment %d from line %d\n",j-i,lineno);
-			Node	*node = new_node(ND_SETVAR_N);
-			Node	*rhs_node = node;
-			for(int k=i; k<j && code[k]->kind==ND_SETVAR; k++){
-				Node *var = new_unary(ND_CELL,new_node_var(code[k]->str));
-				rhs_node->rhs = var;
-				rhs_node = var;
-				code[k]->kind = ND_NOP;
-			}
-			rhs_node->rhs = new_node_none();
-			node->lhs = node->rhs;		// ToDo: あとで書き換える
-			node->rhs = code[i]->lhs;
-//			printf("; ");print_nodes_ln(node);
-			code[i]=node;
-		}
-	}else if(code[i]->kind==ND_ASSIGN // (ND_ASSIGN (ND_ARRAY1 str=B (ND_NUM 0)) (ND_NUM 138))
-		&&   code[i]->lhs->kind==ND_ARRAY1
-		&&   isNUM(code[i]->lhs->lhs) && isNUMorVAR(code[i]->rhs)
-		&&   (code[i]->lhs->lhs->val>=0) && (code[i]->lhs->lhs->val<255)){
-		char *var = code[i]->lhs->str;
-		int j=0;
-		for(j=i+1;code[j];j++){
-			if(code[j]->kind==ND_ASSIGN
-			&& code[j]->lhs->kind==ND_ARRAY1
-			&& strcmp(var,code[j]->lhs->str)==0
-			&& isNUM(code[j]->lhs->lhs) && isNUM(code[j]->rhs)
-			&& (code[j]->lhs->lhs->val>=0) && (code[j]->lhs->lhs->val<255)){
-//				printf("; continuous same ARRAY1 assignment found %d on line %d, %s:%d)=%d\n",j,lineno,var,code[j]->lhs->lhs->val,code[j]->rhs->val);
-				continue;
-			}
-			break;
-		}
-		// 抜けてきたときにj>i+1なら最適化対象
-		if(j>i+1){
-			// (ND_ASSIGN (ND_ARRAY1 str=B (ND_NUM 0)) (ND_NUM 138))
-//			printf("; continuous same ARRAY1 assignment found %d-%d on line %d, %s:%d)=%d\n",i,j-1,lineno,var,code[i]->lhs->lhs->val,code[i]->rhs->val);
-			Node	*node = new_node(ND_SETARY1_N);
-			node->lhs = code[i]->lhs;		// lhsはそのまま下げる。lhs->lhsは不要だがそのまま
-			char	*str = code[i]->lhs->str;
-			Node	*rhs_node = node;
-			for(int k=i; k<j && code[k]->kind==ND_ASSIGN; k++){
-//				printf("; new pair ");print_nodes(code[k]->lhs->lhs);print_nodes_ln(code[k]->rhs);
-				Node *pair = new_binary(ND_CELL,code[k]->lhs->lhs,code[k]->rhs); // offset,valのペア
-//				printf("; pair ");print_nodes_ln(pair);
-				Node *cell = new_unary(ND_CELL,pair);
-//				printf("; cell ");print_nodes_ln(cell);
-				rhs_node->rhs = cell;
-				rhs_node = cell;
-				code[k]->kind = ND_NOP;
-			}
-//			printf("; ");print_nodes_ln(node);
-			code[i]=node;
-		}
-	}else if(code[i]->kind==ND_ASSIGN // (ND_ASSIGN (ND_ARRAY1 str=B (ND_NUM 0)) (ND_NUM 138))
-		&&   code[i]->lhs->kind==ND_ARRAY2
-		&&   isNUM(code[i]->lhs->lhs) && isNUMorVAR(code[i]->rhs)
-		&&   (code[i]->lhs->lhs->val>=0) && (code[i]->lhs->lhs->val<127)){
-		char *var = code[i]->lhs->str;
-		int j=0;
-		for(j=i+1;code[j];j++){
-			if(code[j]->kind==ND_ASSIGN
-			&& code[j]->lhs->kind==ND_ARRAY2
-			&& strcmp(var,code[j]->lhs->str)==0
-			&& isNUM(code[j]->lhs->lhs) && isNUM(code[j]->rhs)
-			&& (code[j]->lhs->lhs->val>=0) && (code[j]->lhs->lhs->val<127)){
-//				printf("; continuous same ARRAY1 assignment found %d on line %d, %s:%d)=%d\n",j,lineno,var,code[j]->lhs->lhs->val,code[j]->rhs->val);
-				continue;
-			}
-			break;
-		}
-		// 抜けてきたときにj>i+1なら最適化対象
-		if(j>i+1){
-			// (ND_ASSIGN (ND_ARRAY1 str=B (ND_NUM 0)) (ND_NUM 138))
-			printf("; continuous same ARRAY1 assignment found %d-%d on line %d, %s:%d)=%d\n",i,j-1,lineno,var,code[i]->lhs->lhs->val,code[i]->rhs->val);
-			Node	*node = new_node(ND_SETARY2_N);
-			node->lhs = code[i]->lhs;		// lhsはそのまま下げる。lhs->lhsは不要だがそのまま
-			char	*str = code[i]->lhs->str;
-			Node	*rhs_node = node;
-			for(int k=i; k<j && code[k]->kind==ND_ASSIGN; k++){
-				printf("; new pair ");print_nodes(code[k]->lhs->lhs);print_nodes_ln(code[k]->rhs);
-				Node *pair = new_binary(ND_CELL,code[k]->lhs->lhs,code[k]->rhs); // offset,valのペア
-				printf("; pair ");print_nodes_ln(pair);
-				Node *cell = new_unary(ND_CELL,pair);
-				printf("; cell ");print_nodes_ln(cell);
-				rhs_node->rhs = cell;
-				rhs_node = cell;
-				code[k]->kind = ND_NOP;
-			}
-			printf("; ");print_nodes_ln(node);
-			code[i]=node;
-		}
-	}
-}
-
-void
-multi_statement_optimize()
-{
-	int lineno;
-	for(int i=0; code[i]; i++){
-		if(code[i]->kind==ND_LINENUM){
-			lineno = code[i]->val;
-			continue;
-		}
-		mso_sub(lineno,i);
-	}
 }

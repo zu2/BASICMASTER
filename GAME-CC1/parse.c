@@ -284,6 +284,7 @@ print_nodes(Node *node)
 	case ND_DEC2VAR:	print_var_node("ND_DEC2VAR",node);break;
 	case ND_ASM:		printf("(ND_ASM str=\"%s\")",str);break;
 	case ND_IFGOTO:		printf("(ND_IFGOTO val=%d ",val);print_nodes(lhs);printf(")");break;
+	case ND_STACKTOP:	printf("(ND_STACKTOP val=%d ",val);print_nodes(lhs);printf(")");break;
 	default:
 			printf(";unknown node kind %d\n",node->kind);
 			break;
@@ -730,7 +731,7 @@ Token *tokenize()
 		}else if(startswitch(p,"[=0")){
 			error_at(p,"Monitor command not implemented\n");
 		}else if(startswitch(p,"[=1")){
-			printf("; MUSIC extension found.\n");
+//			printf("; MUSIC extension found.\n");
 			cur = new_token(TK_MUSIC,cur,p,3);
 			p+=3;
 			while(*p==' '){
@@ -751,7 +752,7 @@ Token *tokenize()
 			if(*p=='\0'){
 				p--;
 			}
-			printf("; MUSIC string: '%s'\n",cur->str);
+//			printf("; MUSIC string: '%s'\n",cur->str);
 			continue;
 		}else if(*p=='['){
 			cur = new_token(TK_KEYBOARD,cur,p,1);

@@ -70,7 +70,6 @@ int main(int argc, char **argv)
 		code[i]=node_opt(code[i]);
 //		printf(";=> ");print_nodes(opt);printf("\n");
 	}
-	multi_statement_optimize();
 	for(int i=0; code[i]; i++){
 //		printf(";gen code[%d] end\n",i);
 		gen_stmt(node_opt(code[i]));

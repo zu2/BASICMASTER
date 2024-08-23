@@ -146,6 +146,7 @@ typedef enum {
 	ND_DEC2VAR,
 	ND_ASM,
 	ND_IFGOTO,
+	ND_STACKTOP,
 } NodeKind;
 
 typedef struct Node Node;
@@ -162,6 +163,7 @@ struct Node {
 //
 // from parse.c
 //
+extern	int		for_count;
 void	print_token(Token *token);
 void	print_nodes(Node *node);
 void	print_nodes_ln(Node *node);
@@ -200,6 +202,7 @@ int		isARRAY2(Node *node);
 int		isARRAY(Node *node);
 int		isSameARRAY(Node *x,Node *y);
 int		isADDorSUB(Node *node);
+int		has_side_effect(Node *node);
 Node	*node_opt(Node *node);
 void	multi_statement_optimize();
 
@@ -217,7 +220,6 @@ void epilogue();
 char	*escape_bmchar(char *str);
 
 Node	*code[10000];
-char	*FORTO_RMB[26];
 typedef	struct {
 		char	*label;
 		char	*str;				// bmstring
