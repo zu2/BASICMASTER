@@ -739,6 +739,47 @@ BO5	CMPA	#'*'
 	BEQ	BO7
 BO6	JMP	BO8
 BO7	PULA
+	IF	1
+*
+*	MULTIPLY	AB = (IX,IX+1)*AB
+*
+MLTPLY	STX	W6C
+	LDX	0,X		;   6
+	STX	W66		;   4
+	STAB	W68+1		;   4
+	STAA	W68		;   4
+	BEQ	MULTI02		;   4
+MULTI	LDX	#16             ;   3
+	CLRA			;   2
+	CLRB			;   2
+ML01    ASLB			;   2	loop 34cycle/loop
+	ROLA			;   2
+	ROL     W68+1		;   6
+	ROL     W68		;   6
+	BCC     ML02		;   4
+	ADDB	W66+1		;   3
+	ADCA	W66             ;   3
+ML02	DEX			;   4
+	BNE     ML01            ;   4
+	LDX	W6C
+	RTS
+*
+*	MULTIPLY	AB = B * (IX,IX+1)	when AccA==0
+*
+MULTI02	LDX	#8		;   3		before 3+2+2=7
+	CLRA			;   2
+	CLRB			;   2
+ML201	ASLB			;   2		loop 24cycle/loop -> 192cycle
+	ROLA			;   2
+	ROL     W68+1		;   6
+	BCC     ML202		;   4
+	ADDB	W66+1		;   3
+	ADCA	W66             ;   3
+ML202	DEX			;   4
+	BNE     ML201           ;   4
+	LDX	W6C
+	RTS
+	ELSE
 *
 *	MULTIPLY Dr Jefyll's method
 *	MULTIPLY	AB = (IX,IX+1)*AB
@@ -784,6 +825,7 @@ ML06	LDAA	W68		;   3 2
 ML07	LDAB	W68+1		;   3 2
 	LDX	W6C		;   4 2
 	RTS			;   5 1
+	ENDIF
 *
 *** POSITIVE DIVISION ***
 *	W68 = AB/(IX,IX+1), AB=modulo
