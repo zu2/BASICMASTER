@@ -945,10 +945,12 @@ void	CLR_X(int v)
 			printf("; CLR ,X #%d optimized to STAA\n",v);
 			STAA_X(v+1);				// 6 2
 			STAA_X(v);					// 6 2
+			return;
 		}else if(exist_loc_const(loc_B,0)){
 			printf("; CLR ,X #%d optimized to STAB\n",v);
 			STAB_X(v+1);				// 6 2
 			STAB_X(v);					// 6 2
+			return;
 		}
 		printf("\tCLR\t%d,X\n",v+1);	// 7 2
 		printf("\tCLR\t%d,X\n",v);		// 7 2
@@ -1148,7 +1150,21 @@ void	JMP(char *to)
 }
 void	JSR(char *to)
 {
+		char	*keepTDXWK[] = {
+				"MULTIPLY","DIVIDE","DIVPOW2","RANDOM","PRHEX4","PRHEX2","PRINTTAB",
+				"PRINTL","PRINTR","PRINTCR","PRINTCR","INPUT","KBIN_SUB",
+				"PRINTSTR","ASCIN","CURPOS",
+		};
 		printf("\tJSR\t%s\n",to);
+		for (int i=0; i<(sizeof(keepTDXWK)/sizeof(*keepTDXWK)); i++){
+			if(strcmp(to,keepTDXWK[i])==0){
+				purge_loc(loc_A);
+				purge_loc(loc_B);
+				purge_loc(loc_D);
+				purge_loc(loc_X);
+				return;
+			}
+		}
 		purge_loc_all();
 }
 void	JSR_X(int v)
