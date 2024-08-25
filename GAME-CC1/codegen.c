@@ -26,6 +26,13 @@ loc_t	*loc_A = &loc_AA;
 loc_t	*loc_B = &loc_BB;
 loc_t	*loc_D = &loc_DD;
 loc_t	*loc_X = &loc_XX;
+typedef	struct {
+	int		scale;	// if scale==0, invalid data. scale hold 1 or 2
+	char	*v1;	// base variable
+	char	*v2;	// offset var
+} tdxwk_t;
+tdxwk_t	loc_TT;
+tdxwk_t	*loc_TDXWK = &loc_TT;
 
 void purge_loc(loc_t *p)
 {
@@ -45,6 +52,22 @@ void purge_loc(loc_t *p)
 	p->n = 0;
 	p->offset = 0;
 }
+int	is_free_loc_A()
+{
+	loc_t	*p = loc_A;
+	return (p->valid==0 && p->n==0 && p->offset==0);
+}
+int	is_free_loc_B()
+{
+	loc_t	*p = loc_B;
+	return (p->valid==0 && p->n==0 && p->offset==0);
+}
+int	is_free_loc_X()
+{
+	loc_t	*p = loc_X;
+	return (p->valid==0 && p->n==0 && p->offset==0);
+}
+
 void purge_loc_B()
 {
 	purge_loc(loc_B);
@@ -61,16 +84,32 @@ void purge_loc_D()
 	purge_loc(loc_B);
 	purge_loc(loc_D);
 }
+void purge_loc_X()
+{
+	purge_loc(loc_X);
+}
+void	purge_loc_var_sub(loc_t *p, char *v);
+
+void purge_loc_TDXWK()
+{
+#if	0
+	printf("; purge loc TDXWK called\n");
+	if(loc_TDXWK->scale){
+		tdxwk_t *p=loc_TDXWK;
+		printf("; purge loc TDXWK %s+%s*%d\n",p->v1,p->v2,p->scale);
+	}
+#endif
+	loc_TDXWK->scale = 0;
+	purge_loc_var_sub(loc_D,"TDXWK");
+	purge_loc_var_sub(loc_X,"TDXWK");
+}
 void purge_loc_all()
 {
 	purge_loc(loc_A);
 	purge_loc(loc_B);
 	purge_loc(loc_D);
 	purge_loc(loc_X);
-}
-void purge_loc_X()
-{
-	purge_loc(loc_X);
+	purge_loc_TDXWK();
 }
 void add_loc_const(loc_t *p,int n)
 {
@@ -103,6 +142,19 @@ void add_loc_const_B(int n)
 void add_loc_var(loc_t *p,char *s)
 {
 	p->var[p->n++] = s;
+#if	0
+	if(p==loc_X){
+		printf("; add_loc_var %s to IX\n",s);
+		printf("; =>");
+		for(int i=0; i<p->n; i++){
+			printf(" %s",p->var[i]);
+		}
+		if(p->valid){
+			printf(", %d",p->val);
+		}
+		printf("\n");
+	}
+#endif
 }
 void add_loc_var_offset(loc_t *p,char *s,int v)
 {
@@ -110,6 +162,31 @@ void add_loc_var_offset(loc_t *p,char *s,int v)
 	p->v_off = s;
 	p->offset = v;
 }
+void add_loc_TDXWK_var(int scale,char *v1,char *v2){		// Var(var)
+	tdxwk_t *p = loc_TDXWK;
+	p->scale = scale;
+	p->v1 = v1;
+	p->v2 = v2;
+//	printf("; add loc TDXWK for %s+%s*%d\n",v1,v2,scale);
+}
+int	exist_loc_TDXWK(int scale,char *v1,char *v2)
+{
+	tdxwk_t *p = loc_TDXWK;
+#if	0
+	printf("; search TDXWK for %s+%s*%d",v1,v2,scale);
+	if ((p->scale==scale)
+		&&  (strcmp(p->v1,v1)==0)
+		&&  (strcmp(p->v2,v2)==0)){
+		printf(" => found\n");
+	}else{
+		printf(" => not found\n");
+	}
+#endif
+	return ((p->scale==scale)
+		&&  (strcmp(p->v1,v1)==0)
+		&&  (strcmp(p->v2,v2)==0));
+}
+
 int exist_loc_var_offset(loc_t *p,char *s,int v)
 {
 	if(p->offset!=0
@@ -136,6 +213,10 @@ int exist_loc_const_B(int n)
 	n = n&0x0ff;
 	return	exist_loc_const(loc_B,n);
 }
+int exist_loc_const_X(int n)
+{
+	return	exist_loc_const(loc_X,n);
+}
 
 int exist_loc_var(loc_t *p,char *s)
 {
@@ -156,11 +237,26 @@ void purge_loc_var_sub(loc_t *p,char *s)
 		if(p->var[i]!=NULL && strcmp(p->var[i],s)==0) p->var[i]=NULL;
 	}
 }
+void purge_loc_var_TDXWK(char *s)
+{
+	tdxwk_t *p = loc_TDXWK;
+	if(p->scale==0){		// 使ってない
+		return;
+	}
+	if(strcmp(p->v1,s)==0){	// 配列変数がsだった
+		p->scale = 0;
+	}if(strcmp(p->v2,s)==0){// 添字にsが使われていた
+		p->scale = 0;
+	}
+	purge_loc_var_sub(loc_X,"TDXWK");
+	return;
+}
 void purge_loc_var(char *s)
 {
 	purge_loc_var_sub(loc_B,s);
 	purge_loc_var_sub(loc_D,s);
 	purge_loc_var_sub(loc_X,s);
+	purge_loc_var_TDXWK(s);
 }
 void	print_line(char *p)
 {
@@ -249,7 +345,9 @@ void	INCA()
 {
 		printf("\tINCA\n");
 		if(loc_A->valid){
-			add_loc_const_A((loc_A->val+1)&0x00ff);
+			int	v=loc_A->val+1;
+			purge_loc(loc_A);
+			add_loc_const_A(v&0x00ff);
 			return;
 		}
 		purge_loc_A();
@@ -258,7 +356,9 @@ void	INCB()
 {
 		printf("\tINCB\n");
 		if(loc_B->valid){
-			add_loc_const_B((loc_B->val+1)&0x00ff);
+			int	v=loc_B->val+1;
+			purge_loc(loc_B);
+			add_loc_const_B(v&0x00ff);
 			return;
 		}
 		purge_loc_B();
@@ -267,7 +367,9 @@ void	DECA()
 {
 		printf("\tDECA\n");
 		if(loc_A->valid){
-			add_loc_const_A((loc_A->val-1)&0x00ff);
+			int	v=loc_A->val-1;
+			purge_loc(loc_A);
+			add_loc_const_A(v&0x00ff);
 			return;
 		}
 		purge_loc_A();
@@ -276,7 +378,9 @@ void	DECB()
 {
 		printf("\tDECB\n");
 		if(loc_B->valid){
-			add_loc_const_B((loc_B->val-1)&0x00ff);
+			int	v=loc_B->val-1;
+			purge_loc(loc_B);
+			add_loc_const_B(v&0x00ff);
 			return;
 		}
 		purge_loc_B();
@@ -289,6 +393,16 @@ void	INC_V0(char *v)
 void	DEC_V0(char *v)
 {
 		printf("\tDEC\t_%s\n",v);
+		purge_loc_var(v);
+}
+void	INC_V1(char *v)
+{
+		printf("\tINC\t_%s+1\n",v);
+		purge_loc_var(v);
+}
+void	DEC_V1(char *v)
+{
+		printf("\tDEC\t_%s+1\n",v);
 		purge_loc_var(v);
 }
 void	TST_V0(char	*str)
@@ -372,7 +486,6 @@ void	PULD()
 		PULA();
 		PULB();
 }
-
 void	ASLD()
 {
 		printf("\tASLB\n");
@@ -470,21 +583,29 @@ void	LDAA_I(int v)
 			printf("; LDAA #%d optimized\n",v);
 			TBA();
 		}else if(exist_loc_const_A(v-1)){
-			printf("; LDAA #%d optimized\n",v);
+			printf("; LDAA #%d optimized to INCA\n",v);
 			INCA();
-			add_loc_const_A(v);
 		}else if(exist_loc_const_A(v+1)){
-			printf("; LDAA #%d optimized\n",v);
+			printf("; LDAA #%d optimized to DECA\n",v);
 			DECA();
-			add_loc_const_A(v);
 		}else{
 			printf("\tLDAA\t#%d\n",v);
 			add_loc_const_A(v);
 		}	
 }
-void	LDAA_V(char *str)
+void	LDAA_V0(char *str)
 {
 		printf("\tLDAA\t_%s\n",str);
+		purge_loc_A();
+}
+void	LDAA_V1(char *str)
+{
+		printf("\tLDAA\t_%s+1\n",str);
+		purge_loc_A();
+}
+void	LDAA_V(char *str)
+{
+		LDAA_V0(str);
 		purge_loc_A();
 }
 void	LDAA_X(int v)
@@ -515,6 +636,12 @@ void	LDAB_I(int v)
 		}else if(exist_loc_const_A(v)){
 			printf("; LDAB #%d optimized\n",v);
 			TAB();
+		}else if(exist_loc_const_B(v-1)){
+			printf("; LDAB #%d optimized to INCB\n",v);
+			INCB();
+		}else if(exist_loc_const_B(v+1)){
+			printf("; LDAB #%d optimized to DECB\n",v);
+			DECB();
 		}else{
 			printf("\tLDAB\t#%d\n",v);
 			purge_loc_B();
@@ -686,10 +813,20 @@ void	SUB_IVX(Node *node)		// SUB # or Var or n,X
 		}
 }
 //
-void	AND_I(int v)
+void	ANDA_I(int v)
+{
+		printf("\tANDA\t#%d\n",low(v));
+		purge_loc_A();
+}
+void	ANDB_I(int v)
 {
 		printf("\tANDB\t#%d\n",low(v));
-		printf("\tANDA\t#%d\n",high(v));
+		purge_loc_B();
+}
+void	AND_I(int v)
+{
+		ANDB_I(low(v));
+		ANDA_I(high(v));
 		purge_loc_D();
 }
 void	AND_X(int v)
@@ -760,6 +897,14 @@ void	EOR_L(char *v)
 		printf("\tEORA\t%s\n",		v);
 		purge_loc_D();
 }
+void	BITA_I(int v)
+{
+		printf("\tBITA\t%d\n",v);
+}
+void	BITB_I(int v)
+{
+		printf("\tBITB\t%d\n",v);
+}
 
 void	CLRD()
 {
@@ -786,10 +931,27 @@ void	CLR_V0(char *v)
 		printf("\tCLR\t_%s\n", v);
 		purge_loc_var(v);
 }
+void	STD_X(int v);
+void	STAA_X(int v);
+void	STAB_X(int v);
+
 void	CLR_X(int v)
 {
-		printf("\tCLR\t%d,X\n",v+1);
-		printf("\tCLR\t%d,X\n",v);
+		if(exist_loc_const(loc_D,0)){
+			printf("; CLR ,X #%d optimized to STD\n",v);
+			STD_X(v);
+			return;
+		}else if(exist_loc_const(loc_A,0)){
+			printf("; CLR ,X #%d optimized to STAA\n",v);
+			STAA_X(v+1);				// 6 2
+			STAA_X(v);					// 6 2
+		}else if(exist_loc_const(loc_B,0)){
+			printf("; CLR ,X #%d optimized to STAB\n",v);
+			STAB_X(v+1);				// 6 2
+			STAB_X(v);					// 6 2
+		}
+		printf("\tCLR\t%d,X\n",v+1);	// 7 2
+		printf("\tCLR\t%d,X\n",v);		// 7 2
 }
 void	CLR1_X(int v)
 {
@@ -863,6 +1025,10 @@ void	STD_L(char *str)
 		printf("\tSTAB\t%s+1\n",str);
 		printf("\tSTAA\t%s\n",	str);
 }
+void	STAA_X(int v)
+{
+		printf("\tSTAA\t%d,X\n",v);
+}
 void	STAB_X(int v)
 {
 		printf("\tSTAB\t%d,X\n",v);
@@ -881,6 +1047,16 @@ void	LDX_I(int v)
 		if(exist_loc_const(loc_X,v)){
 			printf("; LDX #%d optimized\n",v);
 			return;
+#if	0
+		}else if(exist_loc_const(loc_X,v+1)){			// 2バイト減るけど1サイクル増える。微妙
+			printf("; LDX #%d optimized to DEX\n",v);
+			DEX();
+			return;
+		}else if(exist_loc_const(loc_X,v)){
+			printf("; LDX #%d optimized to INX\n",v);
+			INX();
+			return;
+#endif
 		}
 		printf("\tLDX\t#%d\n",v);
 		purge_loc_X();
@@ -893,6 +1069,15 @@ void	LDX_X(int v)
 }
 void	LDX_V(char *str)
 {
+#if	0
+		if(loc_X->n){
+			for(int i=0; i<loc_X->n; i++){
+				if(loc_X->var[i]!=NULL && strcmp(loc_X->var[i],str)==0){
+					printf("; LDX_V search %s=%s ?\n",str,loc_X->var[i]);
+				}
+			}
+		}
+#endif
 		if(exist_loc_var(loc_X,str)){
 			printf("; LDX var %s optimized\n",str);
 			return;
@@ -914,7 +1099,7 @@ void	LDX_IL(char *str)
 void	STX_V(char *v)
 {
 		printf("\tSTX\t_%s\n",	v);
-		add_loc_var(loc_X,v);
+		purge_loc_var(v);
 }
 void	STX_L(char *v)
 {
@@ -1038,9 +1223,10 @@ void	TDX()
 {
 #if		1
 		// 12cycle 6bytes (with DP)
-		STD_L("TDXWK");
-		LDX_L("TDXWK");
+		purge_loc_TDXWK();
+		STD_V("TDXWK");
 		purge_loc_X();
+		LDX_V("TDXWK");
 #else
 		// 26cycle 7bytes
 		PSHB();
@@ -1100,6 +1286,9 @@ void gen_expr(Node *node);
 //		ex. A(1)
 //				IX = _A
 //				return 2
+//		ex. A(V+1)
+//				IX = _A + _V*2
+//				return 2
 //		save: 保存しないといけないレジスタ
 //				"A" or "B" or "D"
 //
@@ -1110,9 +1299,9 @@ gen_array_address(Node *node,char *save)
 		printf("; not a array. why? ");print_nodes_ln(node);
 		error("; gen_array_address error\n");
 	}
-	printf("; gen_array_address:");print_nodes_ln(node);
+//	printf("; gen_array_address:");print_nodes_ln(node);
 	if(node->kind==ND_ARRAY1){						// 1バイト間接モード
-		if(isNUM(node->lhs)){					// オフセットが定数
+		if(isNUM(node->lhs)){					// 添字が定数
 			int offset = node->lhs->val;
 			if(offset>=0 && offset<256){
 				LDX_V(node->str);
@@ -1150,6 +1339,39 @@ gen_array_address(Node *node,char *save)
 				return	offset+512;
 #endif
 			}
+		}else if(isVAR(node->lhs)){		// 添字が単純変数
+			if(exist_loc_TDXWK(1,node->str,node->lhs->str)){
+				printf("; reuse TDXWK for %s:%s)\n",node->str,node->lhs->str);
+				LDX_V("TDXWK");
+				return 0;
+			}
+			gen_save(save);
+			LDD_V(node->lhs->str);
+			ADD_V(node->str);			// 配列の添字はAccABにある
+			TDX();						// TFR D,X
+			add_loc_TDXWK_var(1,node->str,node->lhs->str);
+			gen_restore(save);
+			return 0;
+		}else if((node->lhs->kind==ND_ADD
+		&&       isNUM(node->lhs->rhs) && node->lhs->rhs->val>=0 && node->lhs->rhs->val<256)){
+			// V:expr+offset) の場合、offset計算は外に出せる(ただしoffset<256)
+			// (ND_ARRAY1 str=V (+ (expr) (ND_NUM offset)))
+			printf("; array type V:expr+offset) optimize\n");
+			int offset = node->lhs->rhs->val;
+			if(exist_loc_TDXWK(2,node->str,node->lhs->lhs->str)){
+				printf("; reuse TDXWK for %s(%s)\n",node->str,node->lhs->lhs->str);
+				LDX_V("TDXWK");
+				return offset*2;
+			}
+			gen_save(save);
+			gen_expr(node->lhs->lhs);	// offset以外の添字の計算
+			ADD_V(node->str);			// 配列の添字はAccABにある
+			TDX();						// TFR D,X
+			if(isVAR(node->lhs->lhs)){	// 覚えておく
+				add_loc_TDXWK_var(1,node->str,node->lhs->lhs->str);
+			}
+			gen_restore(save);
+			return offset;				// offsetは別に返す
 		}
 		gen_save(save);
 		gen_expr(node->lhs);	// 添字の計算をして
@@ -1189,6 +1411,41 @@ gen_array_address(Node *node,char *save)
 				return	offset*2+512;
 #endif
 			}
+		}else if(isVAR(node->lhs)){		// 添字が単純変数
+			if(exist_loc_TDXWK(2,node->str,node->lhs->str)){
+				printf("; reuse TDXWK for %s(%s)\n",node->str,node->lhs->str);
+				LDX_V("TDXWK");
+				return 0;
+			}
+			gen_save(save);
+			LDD_V(node->lhs->str);
+			ASLD();
+			ADD_V(node->str);			// 配列の添字はAccABにある
+			TDX();						// TFR D,X
+			add_loc_TDXWK_var(2,node->str,node->lhs->str);
+			gen_restore(save);
+			return 0;
+		}else if((node->lhs->kind==ND_ADD
+		&&       isNUM(node->lhs->rhs) && node->lhs->rhs->val>=0 && node->lhs->rhs->val<128)){
+			// V(expr+offset) の場合、offset計算は外に出せる(ただしoffset<128)
+			// ex. (ND_ARRAY2 str=V (+ (expr) (ND_NUM offset)))
+			printf("; array type V(expr+offset) optimize\n");
+			int offset = node->lhs->rhs->val;
+			if(exist_loc_TDXWK(2,node->str,node->lhs->lhs->str)){
+				printf("; reuse TDXWK for %s(%s)\n",node->str,node->lhs->lhs->str);
+				LDX_V("TDXWK");
+				return offset*2;
+			}
+			gen_save(save);
+			gen_expr(node->lhs->lhs);	// offset以外の添字の計算
+			ASLD();
+			ADD_V(node->str);			// 配列の添字はAccABにある
+			TDX();						// TFR D,X
+			if(isVAR(node->lhs->lhs)){	// 覚えておく
+				add_loc_TDXWK_var(2,node->str,node->lhs->lhs->str);
+			}
+			gen_restore(save);
+			return offset*2;			// offsetは別に返す
 		}
 		gen_save(save);
 		gen_expr(node->lhs);
@@ -1227,9 +1484,12 @@ gen_compare(Node *node)
 		if(isVAR(node->lhs)){
 			if(exist_loc_var(loc_D,node->lhs->str)){
 				printf("; TST _%s optimized\n",node->lhs->str);
-				TSTA();
+				TSTA();					// 2cycle,1byte
+			}else if(exist_loc_var(loc_X,node->lhs->str)){
+				printf("; TST _%s optimized\n",node->lhs->str);
+				CPX_I(0);				// 3cycle,3byte
 			}else{
-				TST_V0(node->lhs->str);
+				TST_V0(node->lhs->str);	// 6cycle,3byte
 			}
 		}else{
 			gen_expr(node->lhs);
@@ -1255,7 +1515,7 @@ gen_compare(Node *node)
 			LDX_V(node->lhs->str);
 		}
 		if(isNUM(node->rhs)){
-			if(node->rhs->val){			// LDXはZフラグが立つので0との比較は省略
+			if(node->rhs->val!=0){			// LDXはZフラグが立つので0との比較は省略
 				CPX_I(node->rhs->val);
 			}
 		}else{
@@ -1428,6 +1688,9 @@ gen_branch_if_true(Node *node,char *label)
 			if(exist_loc_var(loc_D,node->lhs->str)){
 				printf("; TST _%s optimized\n",node->lhs->str);
 				TSTA();
+			}else if(exist_loc_var(loc_X,node->lhs->str)){
+				printf("; TST _%s optimized\n",node->lhs->str);
+				CPX_I(0);
 			}else{
 				TST_V0(node->lhs->str);
 			}
@@ -1450,7 +1713,7 @@ gen_branch_if_true(Node *node,char *label)
 			LDX_V(node->lhs->str);
 		}
 		if(isNUM(node->rhs)){
-			if(node->rhs->val){			// LDXはZフラグが立つので0との比較は省略
+			if(node->rhs->val!=0){			// LDXはZフラグが立つので0との比較は省略
 				CPX_I(node->rhs->val);
 			}
 		}else{
@@ -1467,7 +1730,7 @@ gen_branch_if_true(Node *node,char *label)
 		return;
 	}else if(isARRAY1(node->lhs) && isNUM(node->rhs) && isEQorNE(node)
 			&& node->rhs->val>=0 && node->rhs->val<=255){	// 間接1バイトとの ==,!=
-		printf("; gen_branch_if_true ARRAY1 ==/!= 0-255\n");
+//		printf("; gen_branch_if_true ARRAY1 ==/!= 0-255\n");
 		int offset = gen_array_address(node->lhs,"");		// 配列アドレスがIXに入っている
 		LDAB_X(offset);
 		if(node->rhs->val){			// LDAはZフラグが立つので0との比較は省略
@@ -1482,11 +1745,11 @@ gen_branch_if_true(Node *node,char *label)
 		JMP(label);
 		LABEL(if_false);
 	}else if(isARRAY2(node->lhs) && isNUMorVAR(node->rhs) && isEQorNE(node)){// 配列との ==,!= はCPXで
-		printf("; gen_branch_if_true ARRAY2 ==/!= NUMorVAR\n");
+//		printf("; gen_branch_if_true ARRAY2 ==/!= NUMorVAR\n");
 		int offset = gen_array_address(node->lhs,"");		// 配列アドレスがIXに入っている
 		LDX_X(offset);
 		if(isNUM(node->rhs)){
-			if(node->rhs->val){			// LDXはZフラグが立つので0との比較は省略
+			if(node->rhs->val!=0){			// LDXはZフラグが立つので0との比較は省略
 				CPX_I(node->rhs->val);
 			}
 		}else{
@@ -1608,6 +1871,9 @@ gen_branch_if_false(Node *node,char *label)
 			if(exist_loc_var(loc_D,node->lhs->str)){
 				printf("; TST _%s optimized\n",node->lhs->str);
 				TSTA();
+			}else if(exist_loc_var(loc_X,node->lhs->str)){
+				printf("; TST _%s optimized\n",node->lhs->str);
+				CPX_I(0);
 			}else{
 				TST_V0(node->lhs->str);
 			}
@@ -1630,7 +1896,7 @@ gen_branch_if_false(Node *node,char *label)
 			LDX_V(node->lhs->str);
 		}
 		if(isNUM(node->rhs)){
-			if(node->rhs->val){			// LDXはZフラグが立つので0との比較は省略
+			if(node->rhs->val!=0){			// LDXはZフラグが立つので0との比較は省略
 				CPX_I(node->rhs->val);
 			}
 		}else{
@@ -1647,7 +1913,7 @@ gen_branch_if_false(Node *node,char *label)
 		return;
 	}else if(isARRAY1(node->lhs) && isNUM(node->rhs) && isEQorNE(node)
 			&& node->rhs->val>=0 && node->rhs->val<=255){	// 間接1バイトとの ==,!=
-		printf("; gen_branch_if_false ARRAY1 ==/!= 0-255\n");
+//		printf("; gen_branch_if_false ARRAY1 ==/!= 0-255\n");
 		int offset = gen_array_address(node->lhs,"");		// 配列アドレスがIXに入っている
 		LDAB_X(offset);
 		if(node->rhs->val){			// LDAはZフラグが立つので0との比較は省略
@@ -1662,11 +1928,11 @@ gen_branch_if_false(Node *node,char *label)
 		JMP(label);
 		LABEL(if_true);
 	}else if(isARRAY2(node->lhs) && isNUMorVAR(node->rhs) && isEQorNE(node)){// 配列との ==,!= はCPXで
-		printf("; gen_branch_if_false ARRAY2 ==/!= NUMorVAR\n");
+//		printf("; gen_branch_if_false ARRAY2 ==/!= NUMorVAR\n");
 		int offset = gen_array_address(node->lhs,"");		// 配列アドレスがIXに入っている
 		LDX_X(offset);
 		if(isNUM(node->rhs)){
-			if(node->rhs->val){			// LDXはZフラグが立つので0との比較は省略
+			if(node->rhs->val!=0){			// LDXはZフラグが立つので0との比較は省略
 				CPX_I(node->rhs->val);
 			}
 		}else{
@@ -1859,8 +2125,8 @@ void gen_expr(Node *node)
 			return;
 	case ND_CURSORADRS:
 			JSR("CURPOS");
-			STX_L("_CPXWK");
-			LDD_L("_CPXWK");
+			STX_L("_TMP1");
+			LDD_L("_TMP1");
 			return;
 	case ND_KEYBOARD:{
 			char	*label = new_label();
@@ -1932,11 +2198,22 @@ void gen_expr(Node *node)
 	// 以下は二項演算
 	switch (node->kind) {
 	case ND_ADD:
+			if(isVAR(node->lhs)&&isVAR(node->rhs)		// 単純変数同士の加算
+			&& exist_loc_var(loc_D,node->rhs->str)){	// さっき使ったばかりの変数か?
+				Node *old = node;						// 左右を入れ替える
+				node = new_copy_node(old);
+				node->lhs = old->rhs;
+				node->rhs = old->lhs;
+			}
 			gen_expr(node->lhs);
 			if(node->rhs->kind==ND_NUM){	
 				ADD_I(node->rhs->val);
 			}else if (node->rhs->kind==ND_VAR){
 				ADD_V(node->rhs->str);
+			}else if(isARRAY(node->rhs)){
+				int offset = gen_array_address(node->rhs,"D");
+				ADD_X(offset);
+					return;
 			}else{
 				PSHD();
 				gen_expr(node->rhs);
@@ -1963,6 +2240,13 @@ void gen_expr(Node *node)
 			}
 			break;
 	case ND_MUL:
+			if(isVAR(node->lhs)&&isVAR(node->rhs)		// 単純変数同士の乗算
+			&& exist_loc_var(loc_D,node->rhs->str)){	// さっき使ったばかりの変数か?
+				Node *old = node;						// 左右を入れ替える
+				node = new_copy_node(old);
+				node->lhs = old->rhs;
+				node->rhs = old->lhs;
+			}
 			if(isCompare(node->lhs)){	// 比較演算結果との乗算 ex. (x>=y)*32
 				char *label = new_label();
 				gen_expr(node->lhs);
@@ -1988,9 +2272,9 @@ void gen_expr(Node *node)
 				case 10:
 				case 5:
 					gen_expr(node->lhs);
-					STD_L("TDXWK");
+					STD_L("_TMP1");
 					ASLD_N(2);
-					ADD_L("TDXWK");
+					ADD_L("_TMP1");
 					if(node->rhs->val==20){
 						ASLD();
 						ASLD();
@@ -2002,14 +2286,45 @@ void gen_expr(Node *node)
 				case 6:
 				case 3:
 					gen_expr(node->lhs);
-					STD_L("TDXWK");
+					STD_L("_TMP1");
 					ASLD_N(1);
-					ADD_L("TDXWK");
+					ADD_L("_TMP1");
 					if(node->rhs->val==12){
 						ASLD();
 						ASLD();
 					}else if(node->rhs->val==6){
 						ASLD();
+					}
+					return;
+				case 18:
+				case 9:
+					gen_expr(node->lhs);
+					STD_L("_TMP1");
+					ASLD_N(3);
+					ADD_L("_TMP1");
+					if(node->rhs->val==18){
+						ASLD();
+					}
+					return;
+				case 14:
+				case 7:
+					gen_expr(node->lhs);
+					STD_L("_TMP1");
+					ASLD_N(3);
+					SUB_L("_TMP1");
+					if(node->rhs->val==14){
+						ASLD();
+					}
+					return;
+				case 17:
+				case 15:
+					gen_expr(node->lhs);
+					STD_L("_TMP1");
+					ASLD_N(4);
+					if(node->rhs->val==15){
+						SUB_L("_TMP1");
+					}else{
+						ADD_L("_TMP1");
 					}
 					return;
 				case 128:	shift++;
@@ -2049,6 +2364,31 @@ void gen_expr(Node *node)
 				LDX_I(0);
 				STX_V("MOD");
 				LDD_I(1);
+				return;
+			}
+			if(isNUM(node->rhs) && node->rhs->val==2){	// 2で割る時は特殊処理
+				printf("; DIV /2 debug: ");print_nodes_ln(node);
+				if(isVAR(node->lhs)){		// 単純変数/2
+					LDAB_V(node->lhs->str);	// 4 3
+					ANDB_I(1);				// 2 2
+					STAB_V("MOD");			// 5 3
+					CLR_V0("MOD");			// 6 3	↑16 11
+					gen_expr(node->lhs);
+				}else{						// expr/2
+					gen_expr(node->lhs);
+					PSHB();					// 4 1
+					ANDB_I(1);				// 2 2
+					STAB_V("MOD");			// 5 3
+					CLR_V0("MOD");			// 6 3
+					PULB();					// 4 1	↑21 10
+				}
+				char	*label2 = new_label();
+									// If the number is negative, add +1
+				printf("\tASRA\n");	// 2 1 duplicate N(bit7 to 6), shift bit6-1 bit0->C
+				printf("\tROLA\n");	// 2 1 restore bit7-0, bit7(N) to C
+				printf("\tADCB\t#0\n");// 2 2 add carry to D
+				printf("\tADCA\t#0\n");// 2 2
+				ASRD_N(1);			// 2+2 1+1 div by 2
 				return;
 			}
 			// 変数/定数
@@ -2508,8 +2848,14 @@ gen_stmt(Node *node)
 		JSR("PRINTTAB");
 		return;
 	case ND_PRINTCH:
-		gen_expr(node->lhs);
-		printf("\tTBA\n");
+		if(isNUM(node->lhs)){
+			LDAA_I(node->lhs->val);
+		}else if(isVAR(node->lhs)){
+			LDAA_V1(node->lhs->str);
+		}else{	
+			gen_expr(node->lhs);
+			printf("\tTBA\n");
+		}
 		JSR("ASCOUT");
 		return;
 	case ND_PRINTHEX4:
@@ -2755,6 +3101,7 @@ epilogue()
 	printf("\tRTS\n");
 	RMB("_RETSP",2);
 	RMB("_CPXWK",2);
+	RMB("_TMP1",2);
 	printf("VAR\tEQU\t*\n");
 	RMB("_A",2);
 	RMB("_B",2);
@@ -2801,5 +3148,6 @@ epilogue()
 	printf("\tINCLUDE\tgamecc.asm\n");
 	printf("_LPGEND\tEQU\t*\n");
 	printf("\tEND\tmain\n");
+	printf("* vim" ":set" " ts=8:\n");
 }
-
+// vim:set ts=4:

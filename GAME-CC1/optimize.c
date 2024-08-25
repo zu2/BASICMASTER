@@ -168,14 +168,21 @@ Node	*node_opt(Node	*old)
 		if(isSameVAR(node->lhs,node->rhs)){							// A+A
 			return new_ASLD(node->lhs,1);
 		}
-		/* 左辺が定数または変数で、右辺がそれ以外なら入れ替える */
+		// 左が定数または変数で、右がそれ以外なら入れ替える
 		if(isNUMorVAR(node->lhs) && !isNUMorVAR(node->rhs)){
 			node = new_copy_node(old);
 			node->lhs = old->rhs;
 			node->rhs = old->lhs;
 			return	node;
 		}
-		// 左辺が定数の加算で、右辺が定数なら計算しておく
+		// 左が配列で右が定数でも配列でもなければ入れ替える
+		if(isARRAY(node->lhs) && (!isNUMorVAR(node->rhs) && !isARRAY(node->rhs))){
+			node = new_copy_node(old);
+			node->lhs = old->rhs;
+			node->rhs = old->lhs;
+			return	node;
+		}
+		// 左が定数の加算で、右も定数なら計算しておく
 		if((node->lhs->kind==ND_ADD && isNUM(node->lhs->rhs))
 		&& isNUM(node->rhs)){
 			printf("; ");print_nodes_ln(node);
