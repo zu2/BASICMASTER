@@ -69,6 +69,7 @@ struct	Token {
 Token	*token;			// 現在注目しているトークン
 
 extern	char *user_input;
+extern	char *source_file_name;
 
 // 抽象構文木のノードの種類
 typedef enum {

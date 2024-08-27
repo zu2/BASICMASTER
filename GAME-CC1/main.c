@@ -1,5 +1,7 @@
 #include	"common.h"
 
+char	*source_file_name;
+
 int main(int argc, char **argv)
 {
 	if (argc != 2) {
@@ -9,11 +11,11 @@ int main(int argc, char **argv)
 
 	
 //user_input = argv[1];
-	char	*filename = argv[1];
-	int	fd = open(filename,O_RDONLY);
+	source_file_name = argv[1];
+	int	fd = open(source_file_name,O_RDONLY);
 	if(fd<0){
 		perror(NULL);
-		fprintf(stderr,"can't open %s\n",filename);
+		fprintf(stderr,"can't open %s\n",source_file_name);
 		exit(1);
 	}
 	struct  stat    stbuf;
@@ -55,12 +57,10 @@ int main(int argc, char **argv)
 		if(code[i]->kind == ND_LINENUM){
 			current = code[i];
 		}
-		if((code[i]->kind==ND_IF)
-		|| (code[i]->kind==ND_IFGOTO)){
-//			printf("; ND_IF found on line no %d\n",current->val);
-//			printf("; set next line number %d is 'used'.\n",current->rhs->val);
+		if(code[i]->kind==ND_IF){
 			existLINENO(current->rhs->val);
 		}
+		// ND_IFGOTO の時は次の行番号はマークしない
 	}
 	prev->rhs = new_node(ND_LINENUM);
 	prev->rhs->val = 0;

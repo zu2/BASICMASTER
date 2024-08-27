@@ -114,6 +114,7 @@ int	has_side_effect(Node *node)
 	case ND_PRINTCR:
 		return 0;
 	case ND_DIV:
+	case ND_MOD:
 	case ND_INKEY:	// $
 	case ND_INPUT:	// ?
 	case ND_TIMER:
@@ -185,12 +186,15 @@ Node	*node_opt(Node	*old)
 		// 左が定数の加算で、右も定数なら計算しておく
 		if((node->lhs->kind==ND_ADD && isNUM(node->lhs->rhs))
 		&& isNUM(node->rhs)){
-			printf("; ");print_nodes_ln(node);
-			printf("; Folding constant addition +%d+%d\n",node->lhs->rhs->val,node->rhs->val);
+//			printf("; ");print_nodes_ln(node);
+//			printf("; folding constant addition +%d+%d\n",node->lhs->rhs->val,node->rhs->val);
 			int	val = node->lhs->rhs->val + node->rhs->val;
+			if(val==0){
+				return node->lhs->lhs;
+			}
 			node = new_copy_node(node->lhs);
 			node->rhs->val = val;
-			printf("; => ");print_nodes_ln(node);
+//			printf("; => ");print_nodes_ln(node);
 			return node;
 		}
 	}else if(node->kind==ND_SUB){

@@ -411,7 +411,7 @@ bool consume(TokenKind tk) {
 bool consume_op(char *op) {
 //	printf(";consume_op:'%s' -> ",op);
 	if (token->kind != TK_RESERVED ||
-		strlen(op) != token->len ||
+		(int)strlen(op) != token->len ||
 		memcmp(token->str, op, token->len)){
 //		printf("false\n");
 		return false;
@@ -472,7 +472,7 @@ Token *consume_var() {
 // それ以外の場合にはエラーを報告する。
 void expect(char *op) {
 	if (token->kind != TK_RESERVED
-	|| strlen(op) != token->len
+	|| (int)strlen(op) != token->len
 	|| memcmp(token->str,op,token->len)){
 		printf("; ");print_token(token);printf("\n");
 		error_at(token->str,"expected '%c'", op);
@@ -537,6 +537,9 @@ Token *tokenize()
 
 //	printf(";start tokenize() *p='%c'\n",*p);
 	while (*p) {
+		if(*p=='\t'){
+			error_at(p,"TAB found %d\n");
+		}
 		if(linetop){
 //			printf(";start linetop '%s'\n",get_least_line(p));
 			current_linetop = p;
