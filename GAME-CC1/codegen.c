@@ -2967,9 +2967,17 @@ void gen_expr(Node *node)
 					CLR_V0("MOD");			// 6 3
 					PULB();					// 4 1	↑21 10
 				}
+				char *label  = new_label();
+				char *label2 = new_label();
+				TSTA();
+				Bxx("PL",label);
 				ASRD();
 				ADCB_I(0);
 				ADCA_I(0);
+				BRA(label2);
+				LABEL(label);
+				ASRD();
+				LABEL(label2);
 				return;
 			}
 			// 変数/定数
