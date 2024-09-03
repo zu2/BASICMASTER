@@ -10,6 +10,11 @@
 #include	<sys/types.h>
 #include	<sys/stat.h>
 
+//
+//	一部のエミュレーターでは動作に非互換がある
+//			CPX のフラグの扱い
+//
+#define		EMU_CPU_BUGS	(1)
 
 
 typedef	enum	{
@@ -148,6 +153,8 @@ typedef enum {
 	ND_ASM,
 	ND_IFGOTO,
 	ND_STACKTOP,
+	ND_RELMUL,	//	関係演算同士の*
+	ND_RELADD,	//	関係演算同士の+
 } NodeKind;
 
 typedef struct Node Node;
@@ -206,6 +213,18 @@ int		isADDorSUB(Node *node);
 int		has_side_effect(Node *node);
 Node	*node_opt(Node *node);
 void	multi_statement_optimize();
+void	optimize_for_loop();
+
+typedef	struct	{
+		char		*var;			// loop counter
+		int			opt;			// can optimize? (0:No, !0:Yes)
+		int			n;				// number of arrays
+		NodeKind	type[100];		// ND_ARRAY1 or ND_ARRAY2
+		char		*arrays[100];	// loop内の配列。array:var+offset), array(var+offset)のみ
+		char		*label[100];
+} opt_for_loop_t;
+opt_for_loop_t	ofl[1000];
+extern	int	ofl_n;
 
 //
 // from codegen.c

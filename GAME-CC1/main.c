@@ -53,6 +53,7 @@ int main(int argc, char **argv)
 			prev = code[i];
 		}
 	}
+	// 使われている行番号をマークする(used=1)
 	for(int i=0; code[i]; i++){
 		if(code[i]->kind == ND_LINENUM){
 			current = code[i];
@@ -70,6 +71,7 @@ int main(int argc, char **argv)
 		code[i]=node_opt(code[i]);
 //		printf(";=> ");print_nodes(opt);printf("\n");
 	}
+	optimize_for_loop();
 	for(int i=0; code[i]; i++){
 //		printf(";gen code[%d] end\n",i);
 		gen_stmt(node_opt(code[i]));

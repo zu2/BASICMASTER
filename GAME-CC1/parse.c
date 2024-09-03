@@ -185,6 +185,7 @@ print_cell_node(Node *node)
 		rhs = rhs->rhs;
 	}
 	if(rhs->kind!=ND_NONE){
+		printf(" . ");			// dot pair
 		print_nodes(rhs);
 	}
 	printf(")");
@@ -266,9 +267,9 @@ print_nodes(Node *node)
 	case ND_SETCURSORADRS:printf("(ND_SETCURSORADRS ");print_nodes(lhs);printf(")");break;
 	case ND_MUSIC:		printf("(ND_MUSIC str='%s' )",str);break;
 	case ND_KEYBOARD:	printf("(ND_KEYBOARD)");break;
-	case ND_BITAND:		print_binary_node("BITAND",node);break;
-	case ND_BITOR:		print_binary_node("BITOR",node);break;
-	case ND_BITXOR:		print_binary_node("BITXOR",node);break;
+	case ND_BITAND:		print_binary_node("ND_BITAND",node);break;
+	case ND_BITOR:		print_binary_node("ND_BITOR",node);break;
+	case ND_BITXOR:		print_binary_node("ND_BITXOR",node);break;
 	// 以下、オプティマイズ用
 	case ND_SETVAR:		print_setvar_node("ND_SETVAR",node);break;
 	case ND_SETVAR_N:	print_setvar_n_node("ND_SETVAR_N",node);break;
@@ -285,6 +286,8 @@ print_nodes(Node *node)
 	case ND_ASM:		printf("(ND_ASM str=\"%s\")",str);break;
 	case ND_IFGOTO:		printf("(ND_IFGOTO val=%d ",val);print_nodes(lhs);printf(")");break;
 	case ND_STACKTOP:	printf("(ND_STACKTOP val=%d ",val);print_nodes(lhs);printf(")");break;
+	case ND_RELMUL:		print_binary_node("ND_RELMUL",node);break;	//	関係演算同士の*
+	case ND_RELADD:		print_binary_node("ND_RELADD",node);break;	//	関係演算同士の+
 	default:
 			printf(";unknown node kind %d\n",node->kind);
 			break;
@@ -652,8 +655,12 @@ Token *tokenize()
 //				printf(";tokenize OK TK_STR len=%d, '%s'\n",cur->len,cur->str);
 				p++;
 				continue;
+			}else if(*p=='"' && p==q){	// 空文字列はインタプリタではエラーにならないので合わせる
+				cur = new_token(TK_SEP,cur,p,1);	// 何も生成しないと怒られるので…
+				p++;
+				continue;
 			}
-			// "の後に行末やファイル末が来た or 空文字列
+			// "の後に行末やファイル末が来た
 //			printf(";tokenize NG TK_STR len=%ld,'%c'(%02x)\n",p-q,*p,*p);
 			error_at(p-1,"string \"...\" not terminated. '%s'\n",current_linetop);
 			continue;
@@ -802,8 +809,7 @@ Node *new_node(NodeKind kind)
 {
 	Node *node = calloc(1, sizeof(Node));
 	node->kind = kind;
-	node->lhs = 
-	node->rhs = new_node_none();
+	node->lhs = node->rhs = new_node_none();
 	return node;
 }
 
@@ -812,6 +818,7 @@ Node *new_node_string(NodeKind kind,char *str)
 	Node *node = calloc(1, sizeof(Node));
 	node->kind = kind;
 	node->str = str;
+	node->lhs = node->rhs = new_node_none();
 	return node;
 }
 
