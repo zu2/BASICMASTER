@@ -236,6 +236,22 @@ char *lv_search_free_tmp()
 	return	tmp;
 }
 //
+//	レジスタrは未使用（有効な値が入っていない）か？
+//
+int	lv_is_free(char *r)
+{
+	for(int i=0; i<loc_table_size; i++){
+		loc_table_t *p = &loc_table[i];
+		if((p->kind!=LOC_NONE)
+		&& (strcmp(p->reg,r)==0)){
+//			printf("; lv_search_ts found %d\n",i);
+			return	0;
+		}
+	}
+//	printf("; lv_search_ts end\n");
+	return	1;
+}
+//
 //	種別tがレジスタrに入っているか？
 //
 int	lv_search_ts(loc_type_t kind,char *r)
@@ -1192,10 +1208,30 @@ void	ADCB_I(int v)
 		lv_free_reg_B();
 		lv_free_reg_D();
 }
+void	ADCA_I(int v)
+{
+		printf("\tADCA\t#%d\n", low(v));	// キャリーがあるので結果は計算できない
+		lv_free_reg_A();
+		lv_free_reg_D();
+}
 void	ADD_I(int v)
 {
+		int	v0,v2;
 		printf("\tADDB\t#%d\n", low(v));
 		printf("\tADCA\t#%d\n", high(v));
+		if(lv_search_reg_const("D",&v0)){
+			v0 += v;
+			lv_add_reg_const("B",low(v0));
+			lv_add_reg_const("A",high(v0));
+			lv_add_reg_const("D",v0);
+			return;
+		}else if(lv_search_reg_const("B",&v2)){
+			v2 += low(v);
+			lv_add_reg_const("B",low(v2));
+			lv_free_reg_A();
+			lv_free_reg_D();
+			return;
+		}
 		lv_free_reg_ABD();
 }
 void	ADD_IV(char *v)
@@ -2894,40 +2930,46 @@ void gen_expr(Node *node)
 				int16_t	y=node->rhs->val;
 				int16_t	d=x/y;
 				int16_t m=abs(x%y);						// GAME68では余りは常に正
-				LDX_I(m);
-				STX_V("MOD");
+				if(lv_is_free("X")){
+					LDX_I(m);
+					STX_V("MOD");
+				}else{
+					LDD_I(m);
+					STD_V("MOD");
+				}
 				LDD_I(d);
 				return;
 			}
 			if(isSameVAR(node->lhs,node->rhs)){			// 同じ変数の割り算 K/K など
-				LDX_I(0);
-				STX_V("MOD");
+				if(lv_is_free("X")){
+					LDX_I(0);
+					STX_V("MOD");
+				}else{
+					LDD_I(0);
+					STD_V("MOD");
+				}
 				LDD_I(1);
 				return;
 			}
 			if(isNUM(node->rhs) && node->rhs->val==2){	// 2で割る時は特殊処理
 //				printf("; DIV /2 debug: ");print_nodes_ln(node);
 				if(isVAR(node->lhs)){		// 単純変数/2
-					LDAB_V(node->lhs->str);	// 4 3
+					LDAB_V1(node->lhs->str);// 4 3
 					ANDB_I(1);				// 2 2
-					STAB_V("MOD");			// 5 3
+					STAB_V1("MOD");			// 5 3
 					CLR_V0("MOD");			// 6 3	↑16 11
 					gen_expr(node->lhs);
 				}else{						// expr/2
 					gen_expr(node->lhs);
 					PSHB();					// 4 1
 					ANDB_I(1);				// 2 2
-					STAB_V("MOD");			// 5 3
+					STAB_V1("MOD");			// 5 3
 					CLR_V0("MOD");			// 6 3
 					PULB();					// 4 1	↑21 10
 				}
-				char	*label2 = new_label();
-									// If the number is negative, add +1
-				printf("\tASRA\n");	// 2 1 duplicate N(bit7 to 6), shift bit6-1 bit0->C
-				printf("\tROLA\n");	// 2 1 restore bit7-0, bit7(N) to C
-				printf("\tADCB\t#0\n");// 2 2 add carry to D
-				printf("\tADCA\t#0\n");// 2 2
-				ASRD_N(1);			// 2+2 1+1 div by 2
+				ASRD();
+				ADCB_I(0);
+				ADCA_I(0);
 				return;
 			}
 			// 変数/定数
