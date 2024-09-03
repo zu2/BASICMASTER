@@ -101,6 +101,7 @@ ML202		DEX						;	4
 *			SP+2,SP+3	Mask (2^-1)
 *			SP+4		Number of shifts
 *
+			IF		0
 DIVPOW2		TSX
 			STAA	W66
 			BPL		DIVPOW01
@@ -125,6 +126,27 @@ DIVPOW02	ASRA
 			NEGB
 			SBCA	#0
 DIVPOW99	RTS
+			ELSE
+DIVPOW2		TSX
+			STAB	W66
+			ANDB	3,X
+			STAB	_MOD+1	; mask
+			TAB
+			ANDB	2,X		; mask
+			STAB	_MOD
+			LDAB	W66
+DIVPOW01	ASRA
+			RORB
+			DEC		4,X
+			BNE		DIVPOW01
+			TSTA
+			BPL		DIVPOW99
+			LDX		_MOD
+			BEQ		DIVPOW99
+			ADDB	#1
+			ADCA	#0
+DIVPOW99	RTS
+			ENDIF
 *
 *
 ERROR		LDX		#DIV0ERROR
@@ -144,18 +166,17 @@ DIVIDE		LDX		0,X			; If the dividend is 0, the answer is 0
 			STAA	W82+5		; sign. bit7=0:plus, other:minus
 			BMI		DIVIDE01	; AccA<0 -> AccAB<0
 			BNE		DIVIDE02	; AccA>0
-			TSTB
+			TSTB				; when AccA=0, AccB?
 			BNE		DIVIDE02
 			BRA		ERROR		; AccAB=0 -> Error
-DIVIDE01	COM     W82+5		; AccAB<0
-			NEGA
+DIVIDE01	NEGA
 			NEGB
 			SBCA	#0
 DIVIDE02	STAB	W66+1
 			STAA	W66
 			LDAA	W68
 			BPL     DIVIDE03
-			DEC     W82+5
+			COM     W82+5		; if W68<0 then sign change
 			LDAB	W68+1		; 3 2
 			NEGA				; 2 1
 			NEGB				; 2 1
