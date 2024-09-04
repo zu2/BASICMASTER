@@ -2968,23 +2968,17 @@ void gen_expr(Node *node)
 					PULB();					// 4 1	↑21 10
 				}
 				char *label  = new_label();
-				char *label2 = new_label();
 				TSTA();
 				Bxx("PL",label);
-				ASRD();
-				ADCB_I(0);
-				ADCA_I(0);
-				BRA(label2);
+				ADD_I(1);
 				LABEL(label);
 				ASRD();
-				LABEL(label2);
 				return;
 			}
-			// 変数/定数
-			if(isVAR(node->lhs) && isNUM(node->rhs) && node->rhs->val>0){
+			// 定数での除算
+			if(isNUM(node->rhs) && node->rhs->val>0){
 //				printf("; DIV debug: ");print_nodes_ln(node);
 				int	val=node->rhs->val;
-				char *str=node->lhs->str;
 				int	shift=0;
 				int	mask=val-1;
 				switch(val){
@@ -3006,14 +3000,14 @@ void gen_expr(Node *node)
 							PSHB();
 							LDD_I(mask);
 							PSHD();
-							LDD_V(str);
+							gen_expr(node->lhs);
 							JSR("DIVPOW2");
 							INS2();
 							INS();
 							return;
 				case	1:	// 要る?
 							CLR_V("MOD");
-							LDD_V(str);
+							gen_expr(node->lhs);
 							return;
 				default: break;
 				}

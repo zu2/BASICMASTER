@@ -128,23 +128,25 @@ DIVPOW02	ASRA
 DIVPOW99	RTS
 			ELSE
 DIVPOW2		TSX
-			STAB	W66
-			ANDB	3,X
-			STAB	_MOD+1	; mask
-			TAB
-			ANDB	2,X		; mask
-			STAB	_MOD
-			LDAB	W66
-DIVPOW01	ASRA
+			STAB	W66+1
+			STAA	W66
+			BPL		DIVPOW01
+			NEGA			; If the dividend is negative, make it positive
+			NEGB
+			SBCA	#0
+DIVPOW01	ANDB	3,X		; mask low
+			ANDA	2,X		; mask high
+			STAB	_MOD+1
+			STAA	_MOD
+			LDAB	W66+1
+			LDAA	W66
+			BPL		DIVPOW02
+			ADDB	3,X
+			ADCA	2,X
+DIVPOW02	ASRA
 			RORB
 			DEC		4,X
-			BNE		DIVPOW01
-			TSTA
-			BPL		DIVPOW99
-			LDX		_MOD
-			BEQ		DIVPOW99
-			ADDB	#1
-			ADCA	#0
+			BNE		DIVPOW02
 DIVPOW99	RTS
 			ENDIF
 *
@@ -169,24 +171,24 @@ DIVIDE		LDX		0,X			; If the dividend is 0, the answer is 0
 			TSTB				; when AccA=0, AccB?
 			BNE		DIVIDE02
 			BRA		ERROR		; AccAB=0 -> Error
-DIVIDE01	NEGA
+DIVIDE01	NEGA				; AccAB = abs(AccAB)
 			NEGB
 			SBCA	#0
 DIVIDE02	STAB	W66+1
 			STAA	W66
 			LDAA	W68
 			BPL     DIVIDE03
-			COM     W82+5		; if W68<0 then sign change
+			COM     W82+5		; if divient(W68)<0 then sign change
 			LDAB	W68+1		; 3 2
-			NEGA				; 2 1
+			NEGA				; 2 1	; W68 = abs(W68)
 			NEGB				; 2 1
 			SBCA	#0			; 2 2
 			STAB	W68+1		; 4 2
 			STAA	W68			; 4 2
-DIVIDE03	JSR     DIVPOS
+DIVIDE03	BSR     DIVPOS
 			STAB    W4E+1		; modulo
 			STAA    W4E
-			LDAB    W68+1
+			LDAB    W68+1		; quotient
 			LDAA    W68
 			TST     W82+5
 			BPL     DIVIDE99
@@ -208,7 +210,7 @@ DIVPOS		EQU		*
 			STAA	W68			; 3 2
 			STAB	W68+1		; 3 2	clear W68+1
 			LDX		#8-1		; 3 3
-			BRA		DIVPOS10	; 4 2	AccB is 0, so the jump destination is CLRA.
+			BRA		DIVPOS10	; 4 2	AccB is 0, so the jump to CLRA.
 DIVPOS00	LDX		#16-1		; 3 3
 			CLRB				; 2 1	clear AB
 DIVPOS10	CLRA				; 2 1	7cycle for preparation

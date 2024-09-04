@@ -275,22 +275,6 @@ Node	*node_opt(Node	*old)
 			return new_node_num(1);
 		}
 #endif
-	}else if((node->kind==ND_MOD)
-	&&		 (isNUM(node->lhs))){			// %(定数)、MODを読む場合に使われる
-	}else if((node->kind==ND_MOD)			// MOD演算で定数の場合
-	&&   (node->lhs->kind==ND_DIV)
-	&&    isVAR(node->lhs->lhs)
-	&&    isNUM(node->lhs->rhs)){
-		int	val=node->lhs->rhs->val;
-//		printf("; MOD can optimize MOD(v/%d)? ",val);print_nodes_ln(node);
-		if((val==2)  ||(val==4)   ||(val==8)   ||(val==16)
-		|| (val==32) ||(val==64)  ||(val==128) ||(val==256)
-		|| (val==512)||(val==1024)||(val==2048)||(val==4096)
-		|| (val==8192)||(val==16384)||(val==32768)){
-			return new_ANDI_MOD(node->lhs->lhs,val-1);
-		}else if(val==-32768){
-			return new_ANDI_MOD(node->lhs->lhs,32767);
-		}
 	}else if(node->kind==ND_ASSIGN){
 //		printf("; ND_ASSIGN optimize :");print_nodes_ln(node);
 		// (ND_ASSIGN (ND_VAR A) (ND VAR A)) -> omit
