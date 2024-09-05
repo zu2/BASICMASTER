@@ -3460,7 +3460,8 @@ gen_stmt(Node *node)
 		}else{
 			SUB_V(TO_LABEL);
 		}
-		Bxx("PL",NEXT_LABEL);
+//		Bxx("PL",NEXT_LABEL);
+		Bxx("GE",NEXT_LABEL);
 		JMP(FOR_LABEL);
 		LABEL(NEXT_LABEL);
 		}

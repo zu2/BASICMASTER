@@ -75,8 +75,9 @@ ML05		LSRA					;   2 1
 			RORB					;   2 1
 			DEX						;	4 1
 			BNE     ML04            ;   4 2			↑28cycle/loop => *8=>224cycle
-			ROR		W68				;   6 3
-ML06		LDAA	W68				;	3 2
+;;			ROR		W68				;   6 3
+			LDAA	W68				;	3 2
+			RORA					;   2 1
 ML07		LDAB	W68+1			;	3 2
 			RTS						;	5 1
 *
@@ -162,6 +163,7 @@ DIVZERO		STX		_MOD
 *	AB<=(SP+2,SP+3)/AB, _MOD<=modulo
 *  (DIVPOS:W68<=W68/W66  AB<=Modulo)
 *
+			IF		0
 DIVIDE		LDX		0,X			; If the dividend is 0, the answer is 0
 			BEQ		DIVZERO
 			STX		W68
@@ -196,6 +198,40 @@ DIVIDE03	BSR     DIVPOS
 			NEGB
 			SBCA	#0
 DIVIDE99	RTS
+			ELSE
+DIVIDE		LDX		0,X			; If the dividend is 0, the answer is 0
+			BEQ		DIVZERO
+			STX		W68
+			STAA	W82+5		; sign. bit7=0:plus, other:minus
+			BPL		DIVIDE02	; AccA<0 -> AccAB<0
+DIVIDE01	NEGA				; AccAB = abs(AccAB)
+			NEGB
+			SBCA	#0
+DIVIDE02	STAB	W66+1
+			STAA	W66
+			LDX		W66
+			BEQ		ERROR
+			LDAA	W68
+			BPL     DIVIDE03
+			COM     W82+5		; if divient(W68)<0 then sign change
+			LDAB	W68+1		; 3 2
+			NEGA				; 2 1	; W68 = abs(W68)
+			NEGB				; 2 1
+			SBCA	#0			; 2 2
+			STAB	W68+1		; 4 2
+			STAA	W68			; 4 2
+DIVIDE03	BSR     DIVPOS
+			STAB    W4E+1		; modulo
+			STAA    W4E
+			LDAB    W68+1		; quotient
+			LDAA    W68
+			TST     W82+5
+			BPL     DIVIDE99
+			NEGA
+			NEGB
+			SBCA	#0
+DIVIDE99	RTS
+			ENDIF
 *
 *	DIVIDE Positive number / non restoring division algorithm
 *			W68 = W68/W66 AB=MODULO (W68=Q,W66=M,N=16,A=AccAB)
@@ -203,6 +239,7 @@ DIVIDE99	RTS
 *			cf. https://www.wizforest.com/tech/Z80vs6502/div.html;p2
 *			IX is destroyed
 *
+			IF		1
 DIVPOS		EQU		*
 			LDB		W68			; 3 3	the dividend less than or equal to 255 (<=255?)
 			BNE		DIVPOS00	; 4 2		↑7cycle overhead
@@ -249,6 +286,55 @@ DIVMNS02	ASL		W68+1		; 6 3
 			ADDB	W66+1		; 3 2
 			ADCA	W66			; 3 2
 			RTS					; 5 1
+			ELSE
+DIVPOS		EQU		*
+			STAA	W68			; 4 2
+			BEQ		DIVPOS11	; 4 2	↑7cycle overhead
+			STAB	W68+1		; 4 2
+			CLRB
+			CLRA
+			LDX		#16-1
+			BRA		DIVPOS01
+DIVPOS11	STAA	W68+1		; 4 2	clear W68+1
+			STAB	W68			; 4 2	shift 8bit
+			LDX		#8-1		; 3 3
+			CLRB				; 2 1	7cycle for preparation
+DIVPOS01	ROL		W68+1		; 6 3
+			ROL		W68			; 6 3
+			ROLB				; 2 1	shift AB<<1
+			ROLA				; 2 1
+			SUBB	W66+1		; 3 2
+			SBCA	W66			; 3 2
+			BCS		DIVMNS00	; 4 2
+			SEC					; 2 1
+			ROL		W68+1		; 6 3
+			ROL		W68			; 6 3	;
+DIVPLS01	ROLB				; 2 1
+			ROLA				; 2 1
+			SUBB	W66+1		; 3 2
+			SBCA	W66			; 3 2
+			BCS		DIVMNS02	; 4 2	↑14cycle
+DIVPLS02	SEC					; 2 1
+DIVPLS03	ROL		W68+1		; 6 3
+			ROL		W68			; 6 3
+			DEX					; 4 1
+			BNE		DIVPLS01	; 4 2	↑22cycle	/ 36cycle for plus
+			RTS					; 5 1
+DIVMNS00	ASL		W68+1		; 6 3
+			ROL		W68			; 6 3	↑12cycle
+DIVMNS01	ROLB				; 2 1
+			ROLA				; 2 1
+			ADDB	W66+1		; 3 2
+			ADCA	W66			; 3 2
+			BCS		DIVPLS03	; 4 2	↑14cycle
+DIVMNS02	ASL		W68+1		; 6 3
+			ROL		W68			; 6 3
+			DEX					; 4 1
+			BNE		DIVMNS01	; 4 2	↑20cycle	/ 34cycle for minus
+			ADDB	W66+1		; 3 2
+			ADCA	W66			; 3 2
+			RTS					; 5 1
+			ENDIF
 *
 *	RANDOM 1 between AB
 *			cf.https://tinyework.flston.com/xorshift-on-hd6301
