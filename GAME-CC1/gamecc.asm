@@ -43,7 +43,7 @@ LBUFSIZ		EQU		6+1			; 数値入力しかしないので '-'と5桁まで。末�
 *
 *	MULTIPLY Dr Jefyll's method
 *			cf. http://forum.6502.org/viewtopic.php?p=19958#p19958
-*	MULTIPLY	AB = (IX,IX+1)*AB
+*	MULTIPLY	AB = (IX,IX+1)*AB	;	The destination indicated by IX will not be destroyed.
 *
 MULTIPLY	LDX		0,X				;   6 2		呼び出し元でW66に入れてから呼びたいが難しい
 			STX		W66				;	4 2
@@ -97,37 +97,11 @@ ML202		DEX						;	4
 			RTS
 *
 *
-*	Division by powers of 2
+*	Division by powers of 2 (2^n)
 *			AccAB		Number to be divided
-*			SP+2,SP+3	Mask (2^-1)
-*			SP+4		Number of shifts
+*			SP+2,SP+3	Mask (2^n-1)			: not destroyed.
+*			SP+4		Number of shifts (n)	: destroyed.
 *
-			IF		0
-DIVPOW2		TSX
-			STAA	W66
-			BPL		DIVPOW01
-			NEGA			; If the dividend is negative, make it positive
-			NEGB
-			SBCA	#0
-DIVPOW01	STAB	IXSAVE+1	; PSH/PULよりもDPが速い 4+4+4+4 vs 4+4+3+3
-			STAA	IXSAVE
-			ANDB	3,X		; mask
-			ANDA	2,X		; mask
-			STAB	_MOD+1
-			STAA	_MOD
-			LDAB	IXSAVE+1
-			LDAA	IXSAVE
-DIVPOW02	ASRA
-			RORB
-			DEC		4,X
-			BNE		DIVPOW02
-			TST		W66
-			BPL		DIVPOW99
-			NEGA			; The dividend was negative, take back to negative number.
-			NEGB
-			SBCA	#0
-DIVPOW99	RTS
-			ELSE
 DIVPOW2		TSX
 			STAB	W66+1
 			STAA	W66
@@ -149,7 +123,6 @@ DIVPOW02	ASRA
 			DEC		4,X
 			BNE		DIVPOW02
 DIVPOW99	RTS
-			ENDIF
 *
 *
 ERROR		LDX		#DIV0ERROR
@@ -160,17 +133,17 @@ DIVZERO		STX		_MOD
 			CLRA
 			RTS
 *
-*	AB<=(SP+2,SP+3)/AB, _MOD<=modulo
+*	AB<=(IX,IX+1)/AB, _MOD<=modulo
 *  (DIVPOS:W68<=W68/W66  AB<=Modulo)
 *
-			IF		0
+*								; the dividend is often 0, it is more efficient to check it first.
 DIVIDE		LDX		0,X			; If the dividend is 0, the answer is 0
 			BEQ		DIVZERO
 			STX		W68
 			STAA	W82+5		; sign. bit7=0:plus, other:minus
 			BMI		DIVIDE01	; AccA<0 -> AccAB<0
-			BNE		DIVIDE02	; AccA>0
-			TSTB				; when AccA=0, AccB?
+			BNE		DIVIDE02	; AccA>0 ?
+			TSTB				; when AccA=0, AccB=0?
 			BNE		DIVIDE02
 			BRA		ERROR		; AccAB=0 -> Error
 DIVIDE01	NEGA				; AccAB = abs(AccAB)
@@ -181,12 +154,10 @@ DIVIDE02	STAB	W66+1
 			LDAA	W68
 			BPL     DIVIDE03
 			COM     W82+5		; if divient(W68)<0 then sign change
-			LDAB	W68+1		; 3 2
 			NEGA				; 2 1	; W68 = abs(W68)
-			NEGB				; 2 1
+			NEG		W68+1		; 6 3
 			SBCA	#0			; 2 2
-			STAB	W68+1		; 4 2
-			STAA	W68			; 4 2
+			STAA	W68			; 4 2	↑14cycle/8bytes
 DIVIDE03	BSR     DIVPOS
 			STAB    W4E+1		; modulo
 			STAA    W4E
@@ -198,40 +169,6 @@ DIVIDE03	BSR     DIVPOS
 			NEGB
 			SBCA	#0
 DIVIDE99	RTS
-			ELSE
-DIVIDE		LDX		0,X			; If the dividend is 0, the answer is 0
-			BEQ		DIVZERO
-			STX		W68
-			STAA	W82+5		; sign. bit7=0:plus, other:minus
-			BPL		DIVIDE02	; AccA<0 -> AccAB<0
-DIVIDE01	NEGA				; AccAB = abs(AccAB)
-			NEGB
-			SBCA	#0
-DIVIDE02	STAB	W66+1
-			STAA	W66
-			LDX		W66
-			BEQ		ERROR
-			LDAA	W68
-			BPL     DIVIDE03
-			COM     W82+5		; if divient(W68)<0 then sign change
-			LDAB	W68+1		; 3 2
-			NEGA				; 2 1	; W68 = abs(W68)
-			NEGB				; 2 1
-			SBCA	#0			; 2 2
-			STAB	W68+1		; 4 2
-			STAA	W68			; 4 2
-DIVIDE03	BSR     DIVPOS
-			STAB    W4E+1		; modulo
-			STAA    W4E
-			LDAB    W68+1		; quotient
-			LDAA    W68
-			TST     W82+5
-			BPL     DIVIDE99
-			NEGA
-			NEGB
-			SBCA	#0
-DIVIDE99	RTS
-			ENDIF
 *
 *	DIVIDE Positive number / non restoring division algorithm
 *			W68 = W68/W66 AB=MODULO (W68=Q,W66=M,N=16,A=AccAB)
@@ -239,15 +176,14 @@ DIVIDE99	RTS
 *			cf. https://www.wizforest.com/tech/Z80vs6502/div.html;p2
 *			IX is destroyed
 *
-			IF		1
 DIVPOS		EQU		*
-			LDB		W68			; 3 3	the dividend less than or equal to 255 (<=255?)
+			LDAB	W68			; 3 3	the dividend less than or equal to 255 (<=255?)
 			BNE		DIVPOS00	; 4 2		↑7cycle overhead
-			LDA		W68+1		; 3 2	W68 = W68<<8
+			LDAA	W68+1		; 3 2	W68 = W68<<8
 			STAA	W68			; 3 2
 			STAB	W68+1		; 3 2	clear W68+1
 			LDX		#8-1		; 3 3
-			BRA		DIVPOS10	; 4 2	AccB is 0, so the jump to CLRA.
+			BRA		DIVPOS10	; 4 2	now AccB=0, the jump destination is CLRA.
 DIVPOS00	LDX		#16-1		; 3 3
 			CLRB				; 2 1	clear AB
 DIVPOS10	CLRA				; 2 1	7cycle for preparation
@@ -260,7 +196,7 @@ DIVPOS01	ROL		W68+1		; 6 3
 			BCS		DIVMNS00	; 4 2
 			SEC					; 2 1
 			ROL		W68+1		; 6 3
-			ROL		W68			; 6 3	;
+			ROL		W68			; 6 3
 DIVPLS01	ROLB				; 2 1
 			ROLA				; 2 1
 			SUBB	W66+1		; 3 2
@@ -286,55 +222,6 @@ DIVMNS02	ASL		W68+1		; 6 3
 			ADDB	W66+1		; 3 2
 			ADCA	W66			; 3 2
 			RTS					; 5 1
-			ELSE
-DIVPOS		EQU		*
-			STAA	W68			; 4 2
-			BEQ		DIVPOS11	; 4 2	↑7cycle overhead
-			STAB	W68+1		; 4 2
-			CLRB
-			CLRA
-			LDX		#16-1
-			BRA		DIVPOS01
-DIVPOS11	STAA	W68+1		; 4 2	clear W68+1
-			STAB	W68			; 4 2	shift 8bit
-			LDX		#8-1		; 3 3
-			CLRB				; 2 1	7cycle for preparation
-DIVPOS01	ROL		W68+1		; 6 3
-			ROL		W68			; 6 3
-			ROLB				; 2 1	shift AB<<1
-			ROLA				; 2 1
-			SUBB	W66+1		; 3 2
-			SBCA	W66			; 3 2
-			BCS		DIVMNS00	; 4 2
-			SEC					; 2 1
-			ROL		W68+1		; 6 3
-			ROL		W68			; 6 3	;
-DIVPLS01	ROLB				; 2 1
-			ROLA				; 2 1
-			SUBB	W66+1		; 3 2
-			SBCA	W66			; 3 2
-			BCS		DIVMNS02	; 4 2	↑14cycle
-DIVPLS02	SEC					; 2 1
-DIVPLS03	ROL		W68+1		; 6 3
-			ROL		W68			; 6 3
-			DEX					; 4 1
-			BNE		DIVPLS01	; 4 2	↑22cycle	/ 36cycle for plus
-			RTS					; 5 1
-DIVMNS00	ASL		W68+1		; 6 3
-			ROL		W68			; 6 3	↑12cycle
-DIVMNS01	ROLB				; 2 1
-			ROLA				; 2 1
-			ADDB	W66+1		; 3 2
-			ADCA	W66			; 3 2
-			BCS		DIVPLS03	; 4 2	↑14cycle
-DIVMNS02	ASL		W68+1		; 6 3
-			ROL		W68			; 6 3
-			DEX					; 4 1
-			BNE		DIVMNS01	; 4 2	↑20cycle	/ 34cycle for minus
-			ADDB	W66+1		; 3 2
-			ADCA	W66			; 3 2
-			RTS					; 5 1
-			ENDIF
 *
 *	RANDOM 1 between AB
 *			cf.https://tinyework.flston.com/xorshift-on-hd6301
@@ -390,9 +277,9 @@ PH1			DAA					; 2 1	8cycle/6bytes
 *
 * Print a space AccB times
 *
-PRINTTAB	LDAA	#' '
-			TSTB
+PRINTTAB	TSTB
 			BEQ     TABE
+			LDAA	#' '
 TAB1		JSR		ASCOUT
 			DECB
 			BNE     TAB1
@@ -444,7 +331,7 @@ BDNEG		NEGA
 PRE			RTS
 *
 *	AccAB to Decimal W82+1..W82+5
-*			return IX decimal top (zero blanking)
+*			return IX, it contains the first non-zero position (for zero blanking)
 *
 BYNDEC		EQU		*
 			LDX		#W82+1			; 10進文字保存領域。W82+1〜W82+5

@@ -2625,6 +2625,100 @@ void gen_ARRAY1(Node *node)
 	return;
 }
 
+//
+//	乗算をシフト演算に変換する
+//		変換できたら!=0、できなければ0
+//		左項はgen_exprで展開済みで、AccABに入っている
+//
+int	MULtoSHIFT(Node *node)
+{
+	if(!isNUM(node)){
+		return 0;
+	}
+	int	shift=0;
+	char *tmp;
+	switch(node->val){
+	case 256:
+		MUL256();
+		return 1;
+	case 20:
+	case 10:
+	case 5:
+		tmp = lv_search_free_tmp();
+		STD_V(tmp);
+		ASLD_N(2);
+		ADD_V(tmp);
+		if(node->val==20){
+			ASLD();
+			ASLD();
+		}else if(node->val==10){
+			ASLD();
+		}
+		lv_free_reg(tmp);
+		return 1;
+	case 12:
+	case 6:
+	case 3:
+		tmp = lv_search_free_tmp();
+		STD_V(tmp);
+		ASLD_N(1);
+		ADD_V(tmp);
+		if(node->val==12){
+			ASLD();
+			ASLD();
+		}else if(node->val==6){
+			ASLD();
+		}
+		lv_free_reg(tmp);
+		return 1;
+	case 18:
+	case 9:
+		tmp = lv_search_free_tmp();
+		STD_V(tmp);
+		ASLD_N(3);
+		ADD_V(tmp);
+		if(node->val==18){
+			ASLD();
+		}
+		lv_free_reg(tmp);
+		return 1;
+	case 14:
+	case 7:
+		tmp = lv_search_free_tmp();
+		STD_V(tmp);
+		ASLD_N(3);
+		SUB_V(tmp);
+		if(node->val==14){
+			ASLD();
+		}
+		lv_free_reg(tmp);
+		return 1;
+	case 17:
+	case 15:
+		tmp = lv_search_free_tmp();
+		STD_V(tmp);
+		ASLD_N(4);
+		if(node->val==15){
+			SUB_V(tmp);
+		}else{
+			ADD_V(tmp);
+		}
+		lv_free_reg(tmp);
+		return 1;
+	case 128:	shift++;
+	case 64:	shift++;
+	case 32:	shift++;
+	case 16:	shift++;
+	case 8:		shift++;
+	case 4:		shift++;
+	case 2:		shift++;
+		ASLD_N(shift);
+		return 1;
+	default:;
+	}
+	return 0;
+}
+
 void gen_expr(Node *node)
 {
 //	printf(";start gen expr: ");print_nodes_ln(node);
@@ -2795,7 +2889,7 @@ void gen_expr(Node *node)
 			break;
 	case ND_MUL: {
 			char *tmp;
-			if(isVAR(node->lhs)&&isVAR(node->rhs)		// 単純変数同士の加算
+			if(isVAR(node->lhs)&&isVAR(node->rhs)		// 単純変数同士の乗算
 			&& lv_search_reg_var("D",node->rhs->str)){	// AccDに右項の変数がある
 				Node *old = node;						// 左右を入れ替える
 				node = new_copy_node(old);
@@ -2824,96 +2918,27 @@ void gen_expr(Node *node)
 					lv_free_reg(tmp);
 				}
 				return;
-			}else if(isNUM(node->rhs)){
-				int	shift=0;
-				switch(node->rhs->val){
-				case 256:
-					gen_expr(node->lhs);
-					MUL256();
-					return;
-				case 20:
-				case 10:
-				case 5:
-					gen_expr(node->lhs);
-					tmp = lv_search_free_tmp();
-					STD_V(tmp);
-					ASLD_N(2);
-					ADD_V(tmp);
-					if(node->rhs->val==20){
-						ASLD();
-						ASLD();
-					}else if(node->rhs->val==10){
-						ASLD();
+			}else if(isVAR(node->rhs)){
+				gen_expr(node->lhs);
+				LDX_V_I(node->rhs->str);
+				//dump_loc_table();
+				int v;
+				if(lv_search_reg_const("D",&v)){
+					switch(v){
+					case 0:	return;			// 右は展開しなくて良い（けど副作用は？）
+					case 1:	gen_expr(node->rhs);	// 1倍は右項そのまま
+							return;			
 					}
-					lv_free_reg(tmp);
-					return;
-				case 12:
-				case 6:
-				case 3:
-					gen_expr(node->lhs);
-					tmp = lv_search_free_tmp();
-					STD_V(tmp);
-					ASLD_N(1);
-					ADD_V(tmp);
-					if(node->rhs->val==12){
-						ASLD();
-						ASLD();
-					}else if(node->rhs->val==6){
-						ASLD();
-					}
-					lv_free_reg(tmp);
-					return;
-				case 18:
-				case 9:
-					gen_expr(node->lhs);
-					tmp = lv_search_free_tmp();
-					STD_V(tmp);
-					ASLD_N(3);
-					ADD_V(tmp);
-					if(node->rhs->val==18){
-						ASLD();
-					}
-					lv_free_reg(tmp);
-					return;
-				case 14:
-				case 7:
-					gen_expr(node->lhs);
-					tmp = lv_search_free_tmp();
-					STD_V(tmp);
-					ASLD_N(3);
-					SUB_V(tmp);
-					if(node->rhs->val==14){
-						ASLD();
-					}
-					lv_free_reg(tmp);
-					return;
-				case 17:
-				case 15:
-					gen_expr(node->lhs);
-					tmp = lv_search_free_tmp();
-					STD_V(tmp);
-					ASLD_N(4);
-					if(node->rhs->val==15){
-						SUB_V(tmp);
-					}else{
-						ADD_V(tmp);
-					}
-					lv_free_reg(tmp);
-					return;
-				case 128:	shift++;
-				case 64:	shift++;
-				case 32:	shift++;
-				case 16:	shift++;
-				case 8:		shift++;
-				case 4:		shift++;
-				case 2:		shift++;
-					gen_expr(node->lhs);
-					ASLD_N(shift);
-					return;
-				default:;
 				}
+				JSR("MULTIPLY");
+				return;
 			}
 			gen_expr(node->lhs);
+			if(isNUM(node->rhs)){
+				if(MULtoSHIFT(node->rhs)){
+					return;
+				}
+			}
 			tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 			STD_V(tmp);
 			gen_expr(node->rhs);
