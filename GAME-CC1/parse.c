@@ -288,6 +288,7 @@ print_nodes(Node *node)
 	case ND_STACKTOP:	printf("(ND_STACKTOP val=%d ",val);print_nodes(lhs);printf(")");break;
 	case ND_RELMUL:		print_binary_node("ND_RELMUL",node);break;	//	関係演算同士の*
 	case ND_RELADD:		print_binary_node("ND_RELADD",node);break;	//	関係演算同士の+
+	case ND_UPDATEDO:	printf("(ND_UPDATEDO val=%d)",val);break;	// DO-UNTILの制御変数の更新
 	default:
 			printf(";unknown node kind %d\n",node->kind);
 			break;

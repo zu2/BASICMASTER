@@ -208,6 +208,12 @@ Node	*node_opt(Node	*old)
 //			printf("; => ");print_nodes_ln(node);
 			return node;
 		}
+		if((node->lhs->kind==ND_SUB) &&  isVAR(node->lhs->rhs) && isVAR(node->rhs)
+		&& isSameVAR(node->lhs->rhs,node->rhs)){	// 同じ変数を足して引いている
+			printf(";   ");print_nodes_ln(node);
+			printf("; =>");print_nodes_ln(node->lhs->lhs);
+			return node->lhs->lhs;
+		}
 	}else if(node->kind==ND_SUB){
 		if(isNUM(node->lhs) && isNUM(node->rhs)){
 			return new_node_num(node->lhs->val - node->rhs->val);
@@ -218,6 +224,12 @@ Node	*node_opt(Node	*old)
 		if(isNUMorVAR(node->lhs) && !isNUMorVAR(node->rhs)){
 			node = new_binary(ND_ADD, node_opt(new_unary(ND_NEG,old->rhs)), old->lhs);
 			return	node;
+		}
+		if((node->lhs->kind==ND_ADD) &&  isVAR(node->lhs->rhs) && isVAR(node->rhs)
+		&& isSameVAR(node->lhs->rhs,node->rhs)){	// 同じ変数を引いて足している
+			printf(";   ");print_nodes_ln(node);
+			printf("; =>");print_nodes_ln(node->lhs->lhs);
+			return node->lhs->lhs;
 		}
 	}else if(node->kind==ND_MUL){
 //		printf("; optimize ND_MUL\n");
@@ -383,7 +395,8 @@ Node	*node_opt(Node	*old)
 	return	node;
 }
 
-int	ofl_n = 0;
+int	ofl_n = 0;	// optimize for loop
+int	odl_n = 0;	// optimize do  loop
 
 //
 //	varは制御変数、Nodeはそれを使っている配列変数
@@ -398,8 +411,8 @@ optimize_for_array_add(int n,char *var, Node *node)
 			return;
 		}
 	}
-	char	*s = calloc(1,16);				// 追加する
-	sprintf(s,"%s%s%d_%d",node->str,var,(node->kind==ND_ARRAY1)?1:2,n);
+	char	*s = calloc(1,32);				// 追加する
+	sprintf(s,"F_%s%s%d_%d",node->str,var,(node->kind==ND_ARRAY1)?1:2,n);
 	ofl[n].type[ofl_max] = node->kind;
 	ofl[n].arrays[ofl_max] = node->str;
 	ofl[n].label[ofl_max] = s;
@@ -503,7 +516,7 @@ optimize_for_loop()
 	// (ND_FOR J (ND_SETVAR str=J 0 ) 10 )
 	// => (ND_FOR J (ND_SETVAR str=J 0 ) (+ 10 1) )
 	// => (ND_FOR J (ND_SETVAR str=J 0 ) 11 )
-	for(int i=0; code[i]; i++){
+	for(int i=0; code[i]; i++){		// FOR loop の終わり値を1増やす。< を <= にするため
 		Node *node = code[i];
 		if(node->kind==ND_FOR){
 			Node *new = new_binary(ND_ADD,node->rhs,new_node_num(1));
@@ -517,7 +530,7 @@ optimize_for_loop()
 	}
 	ofl_n = 0;
 	for(int i=0; i<(int)(sizeof(ofl)/sizeof(opt_for_loop_t)); i++){
-		int opt=0;
+		ofl[i].opt = 1;
 	}
 	for(int i=0; code[i]; i++){
 		Node *node_f = code[i];
@@ -577,6 +590,7 @@ optimize_for_loop()
 					break;
 				}
 				if(node_n->kind==ND_GOSUB){				// GOSUBがあると制御変数が不確定
+					odl[n].opt = 0;
 					printf("; find gosub:");print_nodes_ln(node_n);
 					break;
 				}
@@ -624,5 +638,281 @@ optimize_for_loop()
 				rewrite_for_array(n,node_f->str,node_n);
 			}
 		}
+	}
+}
+
+//
+//	varは制御変数、Nodeはそれを使っている配列変数
+//
+void
+optimize_do_array_add(int n,char *var, Node *node)
+{
+	int odl_max = odl[n].n;
+	for(int i=0; i<odl_max; i++){			// 登録済み?
+		if(strcmp(odl[n].arrays[i],node->str)==0
+		&& (odl[n].type[i]==node->kind)){	// Yes
+			return;
+		}
+	}
+	char	*s = calloc(1,32);				// 追加する
+	sprintf(s,"D_%s%s%d_%d",node->str,var,(node->kind==ND_ARRAY1)?1:2,n);
+	odl[n].type[odl_max] = node->kind;
+	odl[n].arrays[odl_max] = node->str;
+	odl[n].label[odl_max] = s;
+	odl[n].n++;
+//	printf("; do loop var=%s array search: %s(%s) found.\n",var,node->str,var);
+//	printf(";");print_nodes_ln(node);
+}
+//
+//	DO/UNTILの制御変数を使っている単純配列があるか
+//		制御変数Iの場合、A(I),A(I+off) のような配列を指す
+//
+void
+optimize_do_array_search(int n,char *var,Node *node)
+{
+//	printf("; optimize_do_array_search:");print_nodes_ln(node);
+	switch(node->kind){
+	case ND_NONE:
+	case ND_NOP:
+	case ND_VAR:
+	case ND_NUM:
+	case ND_LINENUM:
+	case ND_PRINTCR:
+		return;
+	default:
+		break;
+	}
+	// search (ND_ARRAY1/2 str=X (ND_VAR str=I))
+	optimize_do_array_search(n,var,node->lhs);
+	optimize_do_array_search(n,var,node->rhs);
+	if(isARRAY(node)){
+		if(isVAR(node->lhs)
+		&& (strcmp(node->lhs->str,var)==0)){			// array(var)
+			optimize_do_array_add(n,var,node);
+		}else if((node->lhs->kind==ND_ADD)
+			&&   isVAR(node->lhs->lhs)
+			&&   (strcmp(node->lhs->lhs->str,var)==0)
+			&&   isNUM(node->lhs->rhs)){				// array(var+NUM)
+				 optimize_do_array_add(n,var,node);
+		}
+	}
+}
+
+void
+rewrite_do_array(int n,char *var,Node *node)
+{
+//	printf("; rewrite_do_array %d,%s:",n,var);print_nodes_ln(node);
+	switch(node->kind){
+	case ND_NONE:
+	case ND_NOP:
+	case ND_VAR:
+	case ND_NUM:
+	case ND_LINENUM:
+	case ND_PRINTCR:
+		return;
+	default:
+		break;
+	}
+	// search (ND_ARRAY1/2 str=X (ND_VAR str=I))
+	rewrite_do_array(n,var,node->lhs);
+	rewrite_do_array(n,var,node->rhs);
+	if(isARRAY(node)){
+		if(isVAR(node->lhs)
+		&& (strcmp(node->lhs->str,var)==0)){			// array:var) or array(var)
+			int odl_max = odl[n].n;
+			for(int i=0; i<odl_max; i++){
+				if(strcmp(odl[n].arrays[i],node->str)==0
+				&& (odl[n].type[i]==node->kind)){	// 登録されてるはず
+//					printf("; for loop array rewrite:\n");
+//					printf(";   ");print_nodes_ln(node);
+					node->str = odl[n].label[i];
+					node->lhs = new_node_num(0);
+//					printf("; =>");print_nodes_ln(node);
+					return;
+				}
+			}
+			// what's happen?
+		}else if((node->lhs->kind==ND_ADD)
+			&&   isVAR(node->lhs->lhs)
+			&&   strcmp(node->lhs->lhs->str,var)==0
+			&&	 isNUM(node->lhs->rhs)){				// array(var+offset)
+			int odl_max = odl[n].n;
+			for(int i=0; i<odl_max; i++){
+				if(strcmp(odl[n].arrays[i],node->str)==0
+				&& (odl[n].type[i]==node->kind)){	// 登録されているはず
+//					printf("; do loop array rewrite:\n");
+//					printf(";   ");print_nodes_ln(node);
+					node->str = odl[n].label[i];
+					node->lhs = node->lhs->rhs;
+//					printf("; =>");print_nodes_ln(node);
+					return;
+				}
+			}
+			// what's happen?
+		}
+	}
+}
+
+void
+optimize_do_loop()
+{
+//	(ND_DO label=1)
+//  (ND_DECVAR str=I)
+//  (ND_UNTIL label=1 (< (ND_VAR str=I) (ND_NUM 0)))
+	odl_n = 0;
+	for(int i=0; i<(int)(sizeof(odl)/sizeof(opt_do_loop_t)); i++){
+		odl[i].var="";
+		odl[i].opt=0;
+		odl[i].step=0;
+	}
+	for(int i=0; code[i]; i++){
+		Node *node_d = code[i];
+		// XXX 行番号とGOTOのチェックを足す
+		if(node_d->kind==ND_DO){
+			int n=node_d->val;
+//			printf("; ND_DO level=%d\n",n);fflush(stdout);
+			if(n>odl_n){
+				odl_n = n;
+			}
+			odl[n].var = "";
+			odl[n].opt = 1;
+			odl[n].n   = 0;
+//			printf("; do_loop begin:");print_nodes_ln(node_d);
+			for(int j=i+1; code[j]; j++){	// 対応するUNTILを探す
+				Node *node_u = code[j];
+				if((node_u->kind==ND_UNTIL)
+				&& (node_u->val==n)){		// 対応するUNTILがあった
+					if(isCompare(node_u->lhs)
+					&& isVAR(node_u->lhs->lhs)){	// 制御変数候補
+						odl[n].var = node_u->lhs->lhs->str;
+					}
+//					printf("; until node %d var=%s :",n,odl[n].var);print_nodes_ln(node_d);
+					break;
+				}
+			}
+			if(strcmp(odl[n].var,"")==0){	// 制御変数の候補がない。次のDOへ
+//				printf("; no control variable\n");
+				odl[n].opt = 0;
+				continue;
+			}
+			int	ccount=0;					// 制御変数への代入の数
+			odl[n].cnode=-1;				// 制御変数への代入の位置
+			for(int j=i+1; code[j]; j++){	// 制御変数候補を探す
+				Node *node_c = code[j];
+				if((node_c->kind==ND_UNTIL)
+				&& (node_c->val==n)){		// 対応するUNTILがあった
+					break;
+				}
+				if((node_c->kind==ND_INCVAR
+				|| node_c->kind==ND_INC2VAR
+				|| node_c->kind==ND_DECVAR
+				|| node_c->kind==ND_DEC2VAR)
+				&& (strcmp(node_c->str,odl[n].var)==0)){	// ±1,±2だけが対象
+//					printf("; candidate ontrol variable %s found\n",node_c->str);
+					switch(node_c->kind){
+					case ND_INCVAR:		odl[n].step=1; break;
+					case ND_INC2VAR:	odl[n].step=2; break;
+					case ND_DECVAR:		odl[n].step=-1; break;
+					case ND_DEC2VAR:	odl[n].step=-2; break;
+					default:	break;
+					}
+					ccount++;
+					odl[n].cnode=j;
+				}
+			}
+			if(ccount!=1){	// 制御変数への代入が無いor2箇所以上ある
+//				printf("; too many or no control variable change\n");
+				odl[n].opt = 0;
+				continue;
+			}
+//			printf("; optimizing do var '%s' check\n",odl[n].var);
+//			printf("; scan loop: ");print_nodes_ln(node_d);
+			for(int j=i+1; code[j]; j++){	// DO..UNTIL内のGOSUB、代入の確認
+				Node *node_u = code[j];
+				if((node_u->kind==ND_UNTIL)
+				&& (node_u->val==n)){		// 対応するUNTILがあった
+					break;
+				}
+				if(node_u->kind==ND_SETVAR
+				&& strcmp(node_u->str,odl[n].var)==0){	// 制御変数への代入がある
+					ofl[n].opt = 0;
+//					printf("; break control var '%s':",odl[n].var);
+					break;
+				}
+				// (ND_ASSIGN (ND_VAR B) (ND_NUM 1))
+				if((node_u->kind==ND_ASSIGN)			// 制御変数への代入がある
+				&& isVAR(node_u->lhs)
+				&& strcmp(node_u->lhs->str,odl[n].var)){
+					odl[n].opt = 0;
+//					printf("; break control var:");print_nodes_ln(node_u);
+					break;
+				}
+				if(node_u->kind==ND_GOSUB){				// GOSUBがあると制御変数が不確定
+					odl[n].opt = 0;
+//					printf("; find gosub:");print_nodes_ln(node_u);
+					break;
+				}
+				optimize_do_array_search(n,odl[n].var,node_u);
+			}
+		}
+	}
+//	printf("; do loop found\n");
+	for(int i=1; i<odl_n+1; i++){
+		if(odl[i].opt==0){		// dont optimize this loop
+//			printf("; do loop optimize ommited for %d %s\n",i,odl[i].var);
+			continue;
+		}
+		if(odl[i].n==0){		// 書き換え対象の配列がないので、これもoptimizeしない
+			odl[i].opt=0;
+//			printf("; do loop optimize ommited for %d %s no arrays\n",i,odl[i].var);
+			continue;
+		}
+//		printf("; do loop optimize %s\n",odl[i].var);
+//		printf("; loop:  %d\n", i);
+//		printf("; var:   %s\n", odl[i].var);
+		for(int j=0; j<odl[i].n; j++){
+			char *s = (odl[i].type[j]==ND_ARRAY1)?":":"(";
+//			printf("; array: %s%s%s+offset)\n",odl[i].arrays[j],s,odl[i].var);
+//			printf("; label: %s\n",odl[i].label[j]);
+		}
+	}
+//	printf("; rewrite AST tree\n");
+	for(int i=0; code[i]; i++){
+		Node *node_d = code[i];
+		if(node_d->kind==ND_DO){
+			int n=node_d->val;
+//			printf("; optimize do loop? %d\n",odl[n].opt);fflush(stdout);
+			if(odl[n].opt==0){		// dont optimize this loop
+				continue;
+			}
+			for(int j=i+1; code[j]; j++){
+				Node *node_u = code[j];
+				// (ND_NEXT J (+ (ND_VAR J) 1 ))
+				if((node_u->kind==ND_UNTIL)
+				&& (node_u->val==n)){		// 対応するUNTILがあったので書き換え終わり
+					break;
+				}
+				rewrite_do_array(n,odl[n].var,node_u);
+			}
+		}
+	}
+//	printf("; insert ND_UPDATEDO\n");
+	for(int i=odl_n; i>0; i--){
+		if(odl[i].opt==0){		// dont optimize this loop
+			continue;
+		}
+		int cnode=odl[i].cnode;
+		int	codeend=0;
+		while(code[codeend]){	// 末尾を探す。毎回探すのは無駄だが、とりあえず
+			codeend++;
+		}
+//		printf("; insert ND_UPDATEDO into ");print_nodes_ln(code[cnode]);
+		for(int j=codeend;j>=cnode;j--){
+			code[j+1]=code[j];
+		}
+		Node *node = new_node(ND_UPDATEDO);
+		node->val = i;
+		code[cnode] = node;
+//		printf("; => ");print_nodes_ln(node);
 	}
 }

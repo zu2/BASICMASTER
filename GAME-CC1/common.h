@@ -155,6 +155,7 @@ typedef enum {
 	ND_STACKTOP,
 	ND_RELMUL,	//	関係演算同士の*
 	ND_RELADD,	//	関係演算同士の+
+	ND_UPDATEDO,	// DO-UNTILの制御変数の更新場所
 } NodeKind;
 
 typedef struct Node Node;
@@ -214,6 +215,7 @@ int		has_side_effect(Node *node);
 Node	*node_opt(Node *node);
 void	multi_statement_optimize();
 void	optimize_for_loop();
+void	optimize_do_loop();
 
 typedef	struct	{
 		char		*var;			// loop counter
@@ -225,6 +227,19 @@ typedef	struct	{
 } opt_for_loop_t;
 opt_for_loop_t	ofl[1000];
 extern	int	ofl_n;
+
+typedef	struct	{
+		char		*var;			// loop counter
+		int			opt;			// can optimize? (0:No, !0:Yes)
+		int			step;			// loop counter step (±1,±2)
+		int			cnode;			// The line updates the loop counter
+		int			n;				// number of arrays
+		NodeKind	type[100];		// ND_ARRAY1 or ND_ARRAY2
+		char		*arrays[100];	// loop内の配列。array:var+offset), array(var+offset)のみ
+		char		*label[100];
+} opt_do_loop_t;
+opt_do_loop_t	odl[1000];
+extern	int	odl_n;
 
 //
 // from codegen.c

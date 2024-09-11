@@ -118,10 +118,10 @@ DIVPOW01	ANDB	3,X		; mask low
 			BPL		DIVPOW02
 			ADDB	3,X
 			ADCA	2,X
-DIVPOW02	ASRA
-			RORB
-			DEC		4,X
-			BNE		DIVPOW02
+DIVPOW02	ASRA				; 2 1
+			RORB				; 2 1
+			DEC		4,X			; 7 2
+			BNE		DIVPOW02	; 4 2
 DIVPOW99	RTS
 *
 *
@@ -139,7 +139,6 @@ DIVZERO		STX		_MOD
 *								; the dividend is often 0, it is more efficient to check it first.
 DIVIDE		LDX		0,X			; If the dividend is 0, the answer is 0
 			BEQ		DIVZERO
-			STX		W68
 			STAA	W82+5		; sign. bit7=0:plus, other:minus
 			BMI		DIVIDE01	; AccA<0 -> AccAB<0
 			BNE		DIVIDE02	; AccA>0 ?
@@ -151,13 +150,14 @@ DIVIDE01	NEGA				; AccAB = abs(AccAB)
 			SBCA	#0
 DIVIDE02	STAB	W66+1
 			STAA	W66
-			LDAA	W68
+			STX		W68
 			BPL     DIVIDE03
 			COM     W82+5		; if divient(W68)<0 then sign change
+			LDAA	W68			; 3 2
 			NEGA				; 2 1	; W68 = abs(W68)
 			NEG		W68+1		; 6 3
 			SBCA	#0			; 2 2
-			STAA	W68			; 4 2	↑14cycle/8bytes
+			STAA	W68			; 4 2	↑17cycle/10bytes
 DIVIDE03	BSR     DIVPOS
 			STAB    W4E+1		; modulo
 			STAA    W4E
@@ -177,10 +177,17 @@ DIVIDE99	RTS
 *			IX is destroyed
 *
 DIVPOS		EQU		*
-			LDAB	W68			; 3 3	the dividend less than or equal to 255 (<=255?)
+			LDAB	W68			; 3 2	the dividend less than or equal to 255 (<=255?)
 			BNE		DIVPOS00	; 4 2		↑7cycle overhead
 			LDAA	W68+1		; 3 2	W68 = W68<<8
-			STAA	W68			; 3 2
+			CMPA	W66+1		; 3 2	W68<W66?
+			BCC		DIVPOS11	; 4 2	may be No.
+			TAB					; 2 1	AccAB = Modulo (=W68)
+			CLRA				; 2 1
+			STAA	W68+1		; 4 2	quotient = 0
+			STAA	W68			; 4 2
+			RTS					; 5 1
+DIVPOS11	STAA	W68			; 3 2
 			STAB	W68+1		; 3 2	clear W68+1
 			LDX		#8-1		; 3 3
 			BRA		DIVPOS10	; 4 2	now AccB=0, the jump destination is CLRA.
@@ -222,6 +229,85 @@ DIVMNS02	ASL		W68+1		; 6 3
 			ADDB	W66+1		; 3 2
 			ADCA	W66			; 3 2
 			RTS					; 5 1
+*
+*	signed/unsigned DIVIDE by 10
+*			AB = AB/10, MOD=W4E
+*			3 times faster than DIVPOS
+*	cf. https://hackaday.com/2020/06/12/binary-math-tricks-shifting-to-divide-by-ten-aint-easy/
+*
+DIVS10		STAA	W66			; 4 2
+			BPL		DIVU100		; 4 2
+			NEGA				; 2 1
+			NEGB				; 2 1
+			SBCA	#0			; 3 2
+			BSR		DIVU10		; 4 2
+			NEGA				; 2 1
+			NEGB				; 2 1
+			SBCA	#0			; 3 2
+			RTS					; 5 1
+DIVU10		STAA	W66			; 4 2
+DIVU100		STAB	W66+1		; 4 2	save dividend n
+			LSRA				; 2 1
+			RORB				; 2 1
+			STAB	W68+1		; 4 2	n>>1
+			STAA	W68			; 4 2
+			LSRA				; 2 1
+			RORB				; 2 1	n>>2
+			ADDB	W68+1		; 3 2
+			ADCA	W68			; 3 2	q=(n>>1)+(n>>2)=n/2+n/4=3n/4
+			STAB	W68+1		; 4 2
+			STAA	W68			; 4 2
+			LSRA				; 2 1
+			RORB				; 2 1
+			LSRA				; 2 1
+			RORB				; 2 1
+			LSRA				; 2 1
+			RORB				; 2 1
+			LSRA				; 2 1
+			RORB				; 2 1	q>>4
+			ADDB	W68+1		; 3 2
+			ADCA	W68			; 3 2	q=q+(q>>4)=3n/4+3n/64=51n/64
+			STAB	W68+1		; 4 2
+			STAA	W68			; 4 2
+			TAB					; 2 1
+			CLRA				; 2 1	q>>8
+			ADDB	W68+1		; 3 2
+			ADCA	W68			; 3 2	q=q+(q>>8)=51n/64+51n/64/256=13107n/16384≒0.8n
+			LSRA				; 2 1
+			RORB				; 2 1
+			LSRA				; 2 1
+			RORB				; 2 1
+			LSRA				; 2 1
+			RORB				; 2 1	q>>3
+			STAB	W68+1		; 4 2	
+			STAA	W68			; 4 2	q=q>>3≒0.8n/8=n/10
+			ASLB				; 2 1
+			ROLA				; 2 1
+			ASLB				; 2 1
+			ROLA				; 2 1	q<<2
+			ADDB	W68+1		; 3 2
+			ADCA	W68			; 3 2	((q<<2)+q)
+			ASLB				; 2 1
+			ROLA				; 2 1	((q<<2)+q)<<1
+			NEGA				; 2 1
+			NEGB				; 2 1
+			SBCA	#0			; 3 2
+			ADDB	W66+1		; 3 2
+			ADCA	W66			; 3 2
+			STAB	W4E+1		; 4 2
+			STAA	W4E			; 4 2
+			SUBB	#10			; 2 2
+			BCS		DIVU101		; 4 2	↑143
+			STAB	W4E+1		; 4 2
+			STAA	W4E			; 4 2
+			LDAB	W68+1		; 3 2
+			LDAA	W68			; 3 2
+			ADDB	#1			; 3 2	; adjust answer by error term
+			ADCA	#0			; 3 2
+			RTS					; 5 1	↑168
+DIVU101		LDAB	W68+1		; 3 2
+			LDAA	W68			; 3 2
+			RTS					; 5 1	↑152
 *
 *	RANDOM 1 between AB
 *			cf.https://tinyework.flston.com/xorshift-on-hd6301
@@ -290,7 +376,10 @@ TABE		RTS
 PRINTL		TSTA	#0
 			BNE		PRINTL1
 			CMPB	#10
-			BCS		PR1DEC
+			BCC		PRINTL1
+PR1DEC		ADDB	#'0
+			TBA
+			JMP		ASCOUT
 PRINTL1		BSR     BDSGN
 PRINTSTR	LDAA    0,X				; 文字列が$00で始まってないこと(空で無いこと）
 PRINTL2		JSR     ASCOUT
@@ -298,12 +387,6 @@ PRINTL3		INX
 			LDAA	0,X
 			BNE		PRINTL2
 			RTS
-*
-*		1桁の数値(0-9)は計算するまでもない
-*
-PR1DEC		ADDB	#'0
-			TBA
-			JMP		ASCOUT
 *
 *	PRINT AccAB decimal right width=WPRINTR
 *

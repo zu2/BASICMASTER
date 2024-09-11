@@ -1202,6 +1202,13 @@ void	ADDB_I(int v)
 		lv_free_reg_B();
 		lv_free_reg_D();
 }
+void	ADDB_V1(char *v)
+{
+		int v1,v2;
+		printf("\tADDB\t_%s+1\n", v);
+		lv_free_reg_B();
+		lv_free_reg_D();
+}
 void	ADCB_I(int v)
 {
 		printf("\tADCB\t#%d\n", low(v));	// キャリーがあるので結果は計算できない
@@ -2870,13 +2877,21 @@ void gen_expr(Node *node)
 				return;
 			}
 			break;
-	case ND_SUB:
-			gen_expr(node->lhs);
-			if(node->rhs->kind==ND_NUM){	
-				SUB_I(node->rhs->val);
-			}else if (node->rhs->kind==ND_VAR){
-				SUB_V(node->rhs->str);
-			}else{
+	case ND_SUB: {
+				gen_expr(node->lhs);
+				if(isNUMorVAR(node->rhs)){
+					SUB_IVX(node->rhs);
+					return;
+				}
+				if(isARRAY(node->rhs) && is_simple_array(node->rhs)){
+					int offset;
+					char *var = gen_array_laddress(node->rhs,"D",&offset);
+					if (var!=NULL) {
+						LDX_V(var);
+						SUB_X(offset);
+						return;
+					}
+				}
 				char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 				STD_V(tmp);
 				printf("; ND_SUB lhs save to %s\n",tmp);
@@ -2983,15 +2998,20 @@ void gen_expr(Node *node)
 					ANDB_I(1);				// 2 2
 					STAB_V1("MOD");			// 5 3
 					CLR_V0("MOD");			// 6 3	↑16 11
-					gen_expr(node->lhs);
-				}else{						// expr/2
-					gen_expr(node->lhs);
-					PSHB();					// 4 1
-					ANDB_I(1);				// 2 2
-					STAB_V1("MOD");			// 5 3
-					CLR_V0("MOD");			// 6 3
-					PULB();					// 4 1	↑21 10
+					LDD_V(node->lhs->str);
+					char *label  = new_label();
+					Bxx("PL",label);
+					ADD_I(1);
+					LABEL(label);
+					ASRD();
+					return;
 				}
+				gen_expr(node->lhs);		// expr/2
+				PSHB();						// 4 1
+				ANDB_I(1);					// 2 2
+				STAB_V1("MOD");				// 5 3
+				CLR_V0("MOD");				// 6 3
+				PULB();						// 4 1	↑21 10
 				char *label  = new_label();
 				TSTA();
 				Bxx("PL",label);
@@ -3001,7 +3021,12 @@ void gen_expr(Node *node)
 				return;
 			}
 			// 定数での除算
-			if(isNUM(node->rhs) && node->rhs->val>0){
+			if(isNUM(node->rhs) && node->rhs->val==10){	// 10で割る時は特殊処理
+				gen_expr(node->lhs);
+				JSR("DIVS10");
+				return;
+			}
+			if(isNUM(node->rhs) && node->rhs->val>0){	// 2の累乗で割る
 //				printf("; DIV debug: ");print_nodes_ln(node);
 				int	val=node->rhs->val;
 				int	shift=0;
@@ -3125,7 +3150,7 @@ void gen_expr(Node *node)
 			char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 			STAB_V1(tmp);
 			gen_expr(node->rhs);
-			ANDB_V1(tmp);							// 256回足したら死ぬかも
+			ADDB_V1(tmp);							// 256回足したら死ぬかも
 			CLRA();
 			lv_free_reg(tmp);
 			}
@@ -3179,7 +3204,7 @@ gen_stmt(Node *node)
 			Node *rhs = node->rhs;		// 右辺
 //			printf("; debug ND_ASSIGN ");print_nodes_ln(node);
 			if(node->lhs->kind==ND_VAR){		// ND_SETVARになってるはずだが…
-				printf("; debug ND_SETVAR?? ");print_nodes_ln(node);
+//				printf("; debug ND_SETVAR?? ");print_nodes_ln(node);
 				gen_expr(rhs);
 				gen_store_var(lhs);
 			}else if(lhs->kind==ND_ARRAY1){
@@ -3383,9 +3408,29 @@ gen_stmt(Node *node)
 		JSR(new_line_label(node->val));
 		lv_free_all();	// レジスタ割り当て全てクリア
 		return;
-	case ND_DO:
-		LABEL(new_do_label(node->val));
-		lv_free_all();	// レジスタ割り当て全てクリア
+	case ND_DO:{
+			int v=node->val;
+//			printf("; ND_DO %s opt=%d\n",odl[v].var,odl[v].opt);
+			if(odl[v].opt){	// control var+arrayの初期化
+//				printf("; ND_DO set control var %s\n",odl[v].var);
+				for(int i=0; i<odl[v].n; i++){	// 使っているARRAYについて
+//					printf("; ND_DO %s(%s)\n",odl[v].arrays[i],odl[v].var);
+					int	scale = (odl[v].type[i]==ND_ARRAY1)?1:2;
+					Node *new = new_unary(ND_SETVAR,
+									new_binary(ND_ADD,
+										new_node_var(odl[v].arrays[i]),
+										new_binary(ND_MUL,	new_node_var(odl[v].var),
+															new_node_num(scale))));
+					new->str = odl[v].label[i];
+					printf(";   ");print_nodes_ln(new);fflush(stdout);
+					new = node_opt(new);
+					printf("; =>");print_nodes_ln(new);fflush(stdout);
+					gen_stmt(new);
+				}
+			}
+			LABEL(new_do_label(v));
+			lv_free_all();	// レジスタ割り当て全てクリア
+		}
 		return;
 	case ND_UNTIL: {
 			char	*DO_LOOP = new_do_label(node->val);
@@ -3395,7 +3440,7 @@ gen_stmt(Node *node)
 				gen_branch_if_false(node->lhs,DO_LOOP);
 				return;
 			}
-			printf("; until expr: ");print_nodes_ln(node->lhs);
+//			printf("; until expr: ");print_nodes_ln(node->lhs);
 			gen_expr(node->lhs);
 			ABA();
 			Bxx("NE",DO_SKIP);
@@ -3404,38 +3449,58 @@ gen_stmt(Node *node)
 			LABEL(DO_SKIP);
 		}
 		return;
+	case ND_UPDATEDO: {
+			int	v=node->val;
+			if(odl[v].opt){	// control var+arrayの更新
+//				printf("; ND_UNTIL control var %s increment\n",node->str);
+				for(int i=0; i<odl[v].n; i++){	// 使っているARRAYについて
+					char *var = odl[v].label[i];
+//					printf("; ND_UNTIL pseudo var %s increment\n",var);
+					int scale = odl[v].step*((odl[v].type[i]==ND_ARRAY1)?1:2);
+					Node *new = new_unary(ND_SETVAR,new_binary(ND_ADD,new_node_var(var),
+																		new_node_num(scale)));
+					new->str = var;
+//					printf("; ND_UNTIL ");print_nodes_ln(new);
+					new = node_opt(new);
+//					printf(";      => ");print_nodes_ln(new);
+					gen_stmt(new);
+				}
+			}
+		}
+		return;
 	case ND_FOR: {
 			// (ND_FOR J (ND_SETVAR J 0 ) 10 )
 			// 終値はoptimizerで+1されており、ND_NEXTでの比較はGEで行える
 			char	*FOR_LABEL=new_for_label(node->val);
 			char	*TO_LABEL=new_to_label(node->val);
-			FORTO[node->val].type  = node->rhs->kind;
-			FORTO[node->val].var   = node->str;
-			FORTO[node->val].loop  = FOR_LABEL;
-			FORTO[node->val].to    = TO_LABEL;
+			int		v = node->val;
+			FORTO[v].type  = node->rhs->kind;
+			FORTO[v].var   = node->str;
+			FORTO[v].loop  = FOR_LABEL;
+			FORTO[v].to    = TO_LABEL;
 			gen_stmt(node->lhs);
-			printf("; ND_FOR %s opt=%d\n",node->str,ofl[node->val].opt);
-			if(ofl[node->val].opt){	// control var+arrayの初期化
-				printf("; ND_FOR set control var %s\n",node->str);
-				for(int i=0; i<ofl[node->val].n; i++){	// 使っているARRAYについて
-					printf("; ND_FOR %s(%s)\n",ofl[node->val].arrays[i],node->str);
-					int	scale = (ofl[node->val].type[i]==ND_ARRAY1)?1:2;
+//			printf("; ND_FOR %s opt=%d\n",node->str,ofl[v].opt);
+			if(ofl[v].opt){	// control var+arrayの初期化
+//				printf("; ND_FOR set control var %s\n",node->str);
+				for(int i=0; i<ofl[v].n; i++){	// 使っているARRAYについて
+//					printf("; ND_FOR %s(%s)\n",ofl[v].arrays[i],node->str);
+					int	scale = (ofl[v].type[i]==ND_ARRAY1)?1:2;
 					Node *new = new_unary(ND_SETVAR,
 									new_binary(ND_ADD,
-										new_node_var(ofl[node->val].arrays[i]),
+										new_node_var(ofl[v].arrays[i]),
 										new_binary(ND_MUL, node->lhs->lhs, new_node_num(scale))));
-					new->str = ofl[node->val].label[i];
-					printf(";   ");print_nodes_ln(new);fflush(stdout);
+					new->str = ofl[v].label[i];
+//					printf(";   ");print_nodes_ln(new);fflush(stdout);
 					new = node_opt(new);
-					printf("; =>");print_nodes_ln(new);fflush(stdout);
+//					printf("; =>");print_nodes_ln(new);fflush(stdout);
 					gen_stmt(new);
 				}
 			}
-			printf("; ND_FOR end of conttol var %s\n",node->str);
+//			printf("; ND_FOR end of conttol var %s\n",node->str);
 //			dump_loc_table();
 			// 終値は+1されている。数値のときはImmediateにするために、値を覚えておく
 			if(isNUM(node->rhs)){
-				FORTO[node->val].val = node->rhs->val;
+				FORTO[v].val = node->rhs->val;
 			}else{	// その他は素直に代入文生成
 				Node *to_node = new_unary(ND_SETVAR,node->rhs);
 				to_node->str = TO_LABEL;
@@ -3450,38 +3515,39 @@ gen_stmt(Node *node)
 		return;
 	case ND_NEXT: {
 		// (ND_NEXT J (+ (ND_VAR J) 1 ))
-		char	*FOR_LABEL=FORTO[node->val].loop;
-		char	*TO_LABEL =FORTO[node->val].to;
+		int		v = node->val;
+		char	*FOR_LABEL=FORTO[v].loop;
+		char	*TO_LABEL =FORTO[v].to;
 		char	*NEXT_LABEL=new_label();
-		printf("; ND_NEXT ");print_nodes_ln(node);
-		printf("; optimize? %d\n",ofl[node->val].opt);
-		printf("; node->lhs->lhs:");print_nodes_ln(node->lhs->lhs);
-		if(ofl[node->val].opt
+//		printf("; ND_NEXT ");print_nodes_ln(node);
+//		printf("; optimize? %d\n",ofl[v].opt);
+//		printf("; node->lhs->lhs:");print_nodes_ln(node->lhs->lhs);
+		if(ofl[v].opt
 		&& node->lhs->kind==ND_ADD
-		&& strcmp(node->lhs->lhs->str,ofl[node->val].var)==0
+		&& strcmp(node->lhs->lhs->str,ofl[v].var)==0
 		&& isNUM(node->lhs->rhs) 
 		&& ((node->lhs->rhs->val==1)||(node->lhs->rhs->val==2))){	// control var+arrayの増分処理
-			printf("; ND_NEXT control var %s increment\n",node->str);
-			for(int i=0; i<ofl[node->val].n; i++){	// 使っているARRAYについて
-				char *var = ofl[node->val].label[i];
-				printf("; ND_NEXT pseudo var %s increment\n",var);
-				int scale = (ofl[node->val].type[i]==ND_ARRAY1)?1:2;
+//			printf("; ND_NEXT control var %s increment\n",node->str);
+			for(int i=0; i<ofl[v].n; i++){	// 使っているARRAYについて
+				char *var = ofl[v].label[i];
+//				printf("; ND_NEXT pseudo var %s increment\n",var);
+				int scale = (ofl[v].type[i]==ND_ARRAY1)?1:2;
 				Node *new = new_unary(ND_SETVAR,new_binary(ND_ADD,new_node_var(var),
 												new_binary(ND_MUL,	node->lhs->rhs,
 																	new_node_num(scale))));
 				new->str = var;
-				printf("; ND_NEXT :");print_nodes_ln(new);
+//				printf("; ND_NEXT ");print_nodes_ln(new);
 				new = node_opt(new);
-				printf(";      => :");print_nodes_ln(new);
+//				printf(";      => ");print_nodes_ln(new);
 				gen_stmt(new);
 			}
 		}
 		gen_expr(node->lhs);		// LDX,INC,STX 5+4+6=15よりもLDD/ADD/STD 8+4+10=22が良い
 		STD_V(node->str);			// 次のLDDが不要になるので
 //		LDD_V(node->str);
-		if(FORTO[node->val].type==ND_NUM){
-			printf("; FORTO[node->val].val=%d\n",FORTO[node->val].val);
-			SUB_I(FORTO[node->val].val);
+		if(FORTO[v].type==ND_NUM){
+			printf("; FORTO[node->val].val=%d\n",FORTO[v].val);
+			SUB_I(FORTO[v].val);
 		}else{
 			SUB_V(TO_LABEL);
 		}
@@ -3860,6 +3926,14 @@ epilogue()
 		}
 		for(int j=0; j<ofl[i].n; j++){
 			printf("_%s\tRMB\t2\t; for loop pseudo array\n",ofl[i].label[j]);
+		}
+	}
+	for(int i=1; i<odl_n+1; i++){
+		if(ofl[i].opt==0){
+			continue;
+		}
+		for(int j=0; j<odl[i].n; j++){
+			printf("_%s\tRMB\t2\t; do loop pseudo array\n",odl[i].label[j]);
 		}
 	}
 	for(int i=0; i<string_count; i++){
