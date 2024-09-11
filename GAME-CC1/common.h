@@ -78,7 +78,7 @@ extern	char *source_file_name;
 
 // 抽象構文木のノードの種類
 typedef enum {
-	ND_NONE,	//
+	ND_NONE,	//	0
 	ND_CELL,	//
 	ND_NOP,		//
 	ND_ADD,		//	+	

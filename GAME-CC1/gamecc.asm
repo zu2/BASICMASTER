@@ -44,9 +44,10 @@ LBUFSIZ		EQU		6+1			; 数値入力しかしないので '-'と5桁まで。末�
 *	MULTIPLY Dr Jefyll's method
 *			cf. http://forum.6502.org/viewtopic.php?p=19958#p19958
 *	MULTIPLY	AB = (IX,IX+1)*AB	;	The destination indicated by IX will not be destroyed.
+*	MULTIPLYX	AB = IX*AB			;	The destination indicated by IX will not be destroyed.
 *
 MULTIPLY	LDX		0,X				;   6 2		呼び出し元でW66に入れてから呼びたいが難しい
-			STX		W66				;	4 2
+MULTIPLYX	STX		W66				;	4 2
 			STAB	W68+1			;	4 2
 			CLRB					;   2 1
 			STAA	W68				;	4 2
@@ -128,10 +129,58 @@ DIVPOW99	RTS
 ERROR		LDX		#DIV0ERROR
 			JSR		PRINTSTR
 			SWI
-DIVZERO		STX		_MOD
-			CLRB
+*
+*	AB<=AB/(IX,IX+1),_MOD<=modulo
+*
+RDIVIDE		LDX		0,X
+*
+*	AB<=AB/IX,		 _MOD<=modulo
+*
+RDIVIDEX	STAA	W82+5
+			BEQ		RDIVIDE01
+			BPL		RDIVIDE02
+			NEGA
+			NEGB
+			SBCA	#0
+			BRA		RDIVIDE02
+RDIVIDE01	TSTB
+			BNE		RDIVIDE02
+DIVZERO2	CLRB
+			CLRA
+			STAB	_MOD+1
+			STAA	_MOD
+			RTS
+RDIVIDE02	STAB	W68+1
+			STAA	W68
+			STX		W66
+			BEQ		ERROR
+			BPL		RDIVIDE03
+			COM		W82+5
+			LDAA	W66
+			NEGA
+			NEG		W66+1
+			SBCA	#0
+			STAA	W66
+RDIVIDE03	BSR     DIVPOS
+			STAB    W4E+1		; modulo
+			STAA    W4E
+			LDAB    W68+1		; quotient
+			LDAA    W68
+			TST     W82+5
+			BPL     RDIVIDE99
+			NEGA
+			NEGB
+			SBCA	#0
+RDIVIDE99	RTS
+*
+*	AB<=IX/AB,		_MOD<=modulo
+*
+DIVIDEX		CPX		#0
+			BNE		DIVIDE00
+DIVZERO		CLRB
 			CLRA
 			RTS
+*
 *
 *	AB<=(IX,IX+1)/AB, _MOD<=modulo
 *  (DIVPOS:W68<=W68/W66  AB<=Modulo)
@@ -139,7 +188,7 @@ DIVZERO		STX		_MOD
 *								; the dividend is often 0, it is more efficient to check it first.
 DIVIDE		LDX		0,X			; If the dividend is 0, the answer is 0
 			BEQ		DIVZERO
-			STAA	W82+5		; sign. bit7=0:plus, other:minus
+DIVIDE00	STAA	W82+5		; sign. bit7=0:plus, other:minus
 			BMI		DIVIDE01	; AccA<0 -> AccAB<0
 			BNE		DIVIDE02	; AccA>0 ?
 			TSTB				; when AccA=0, AccB=0?
@@ -152,7 +201,7 @@ DIVIDE02	STAB	W66+1
 			STAA	W66
 			STX		W68
 			BPL     DIVIDE03
-			COM     W82+5		; if divient(W68)<0 then sign change
+DIVIDE021	COM     W82+5		; if divient(W68)<0 then sign change
 			LDAA	W68			; 3 2
 			NEGA				; 2 1	; W68 = abs(W68)
 			NEG		W68+1		; 6 3
@@ -234,6 +283,7 @@ DIVMNS02	ASL		W68+1		; 6 3
 *			AB = AB/10, MOD=W4E
 *			3 times faster than DIVPOS
 *	cf. https://hackaday.com/2020/06/12/binary-math-tricks-shifting-to-divide-by-ten-aint-easy/
+*	cf. http://homepage.divms.uiowa.edu/~jones/bcd/divide.html
 *
 DIVS10		STAA	W66			; 4 2
 			BPL		DIVU100		; 4 2

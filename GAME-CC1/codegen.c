@@ -2,6 +2,28 @@
 
 
 int	string_count;
+int	const_count=0;
+int	const_table[1024];	// 定数テーブル
+char *const_table_s[1024];	// 定数テーブル
+
+char *add_const_table(int v)
+{
+	char	*s=calloc(1,16);
+	if(v<0){
+		v+=65536;
+	}
+	for(int i=0; i<const_count; i++){
+		if(const_table[i]==v){
+			return const_table_s[i];
+		}
+	}
+	const_table[const_count]=v;
+	sprintf(s,"C_%d",v);
+	const_table_s[const_count]=s;
+	return	const_table_s[const_count++];
+}
+
+
 typedef	struct {
 	int		type;	// ND_NUM or ELSE
 	int		val;	// ND_NUMの時の終値
@@ -450,9 +472,9 @@ void	lv_add_reg_var(char *r, char *var)
 //
 void	lv_add_reg_array_nofree(char *r, loc_type_t kind, char *var1, char *var2, int offset)
 {
-//	printf("; lv_add_reg_array %s=%s,%s,%d\n",r,var1,var2,offset);fflush(stdout);
-	if((kind!=LOC_LARRAY1)&&(kind!=LOC_LARRAY2)){
-		error("; lv_add_reg_array: illegal kind %d\n",kind);
+//	printf("; lv_add_reg_array_nofree %s=%s,%s,%d\n",r,var1,var2,offset);fflush(stdout);
+	if((kind!=LOC_LARRAY1)&&(kind!=LOC_LARRAY2)&&(kind!=LOC_LADRS)){
+		error("; lv_add_reg_array_nofree: illegal kind %d\n",kind);fflush(stdout);
 	}
 	if((strcmp(r,"X")==0)
 	|| (strncmp(r,"TMP",3)==0)
@@ -467,15 +489,15 @@ void	lv_add_reg_array_nofree(char *r, loc_type_t kind, char *var1, char *var2, i
 //							r,var1,(kind==LOC_LARRAY1)?":":"(",var2,offset,i);fflush(stdout);
 		return;
 	}
-	error("; ld_add_array_r can't add to register A,B,D \n");
+	error("; ld_add_array_nofree can't add to register A,B,D \n");
 }
 //
 //	レジスタrに配列変数情報を追加する。既にrに情報があれば消してから追加する
 //
 void	lv_add_reg_array(char *r, loc_type_t kind, char *var1, char *var2, int offset)
 {
-//	printf("; lv_add_reg_array %s=%s,%s,%d\n",r,var1,var2,offset);fflush(stdout);
-	if((kind!=LOC_LARRAY1)&&(kind!=LOC_LARRAY2)){
+	printf("; lv_add_reg_array %s=%s,%s,%d\n",r,var1,var2,offset);fflush(stdout);
+	if((kind!=LOC_LARRAY1)&&(kind!=LOC_LARRAY2)&&(kind!=LOC_LADRS)){
 		error("; lv_add_reg_array: illegal kind %d\n",kind);
 	}
 	lv_free_reg(r);
@@ -899,6 +921,7 @@ void	CLRr(char *r)
 		lv_add_reg_const(r,0);
 		char *pair = pair_reg(r);
 		int val;
+		lv_free_reg("D");
 		if(lv_search_reg_const(pair,&val)){
 			if(strcmp(r,"A")==0){
 				lv_add_reg_const("D",val);
@@ -921,8 +944,8 @@ void	LDAr_I(char *r,int v)
 		v = low(v);
 		int		val;
 		int		pval;
-		int		exist;
-		int		pexist;
+		int		exist=0;
+		int		pexist=0;
 		if((exist=lv_search_reg_const(r,&val))!=0
 		&& (v==val)){									// rには既にその値が入っている
 //			printf("; LDA%s #%d optimized\n",r,v);
@@ -1777,6 +1800,14 @@ void	RMB_comment(char *label,int size,char *comment)
 void	RMB(char *label,int size)
 {
 		printf("%s\tRMB\t\%d\n",label,size);
+}
+void	FDB_V(char *label,int value)
+{
+		printf("_%s\tFDB\t\%d\n",label,value);
+}
+void	FDB(char *label,int value)
+{
+		printf("%s\tFDB\t\%d\n",label,value);
 }
 
 void	FCC_STR(char *str)
@@ -2831,7 +2862,45 @@ void gen_expr(Node *node)
 				LDD_V("MOD");
 				return;
 			}
-			gen_expr(node->lhs);
+			Node	*lhs = node->lhs;
+			if(lhs->kind==ND_DIV && isNUM(lhs->rhs) && lhs->rhs->val>0){	// 2の累乗で割る
+//				printf("; DIV debug: ");print_nodes_ln(node);
+				int	val=lhs->rhs->val;
+				int	mask=val-1;
+				char *label=new_label();
+				switch(val){
+				case	16384:
+				case	8192:
+				case	4096:
+				case	2048:
+				case	1024:
+				case	512:
+				case	256:
+				case	128:
+				case	64:
+				case	32:
+				case	16:
+				case	8:
+				case	4:
+				case	2:
+							gen_expr(lhs->lhs);
+							if(val!=2){
+								TSTA();
+								Bxx("PL",label);
+								NEGD();
+								LABEL(label);
+							}
+							AND_I(mask);
+							STD_V("MOD");
+							return;
+				case	1:	// 要る?
+							CLRD();
+							CLR_V("MOD");
+							return;
+				default: break;
+				}
+			}
+			gen_expr(lhs);
 			LDD_V("MOD");
 			return;
 	case ND_CALLVAL:
@@ -2935,25 +3004,29 @@ void gen_expr(Node *node)
 				return;
 			}else if(isVAR(node->rhs)){
 				gen_expr(node->lhs);
-				LDX_V_I(node->rhs->str);
-				//dump_loc_table();
 				int v;
 				if(lv_search_reg_const("D",&v)){
 					switch(v){
-					case 0:	return;			// 右は展開しなくて良い（けど副作用は？）
+					case 0:	return;			// 左が0なら右は展開しなくて良い（けど副作用は？）
 					case 1:	gen_expr(node->rhs);	// 1倍は右項そのまま
 							return;			
 					}
 				}
-				JSR("MULTIPLY");
+				LDX_V(node->rhs->str);
+				JSR("MULTIPLYX");
 				return;
 			}
-			gen_expr(node->lhs);
 			if(isNUM(node->rhs)){
+				gen_expr(node->lhs);
 				if(MULtoSHIFT(node->rhs)){
 					return;
 				}
+//				tmp = add_const_table(node->rhs->val);
+				LDX_I(node->rhs->val);
+				JSR("MULTIPLYX");
+				return;
 			}
+			gen_expr(node->lhs);
 			tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 			STD_V(tmp);
 			gen_expr(node->rhs);
@@ -2961,7 +3034,7 @@ void gen_expr(Node *node)
 			JSR("MULTIPLY");
 			lv_free_reg(tmp);
 			}
-			break;
+			return;
 	case ND_DIV: {
 			// 余り(MOD)の処理があるので簡単ではない
 			// 符号拡張に注意
@@ -3062,12 +3135,31 @@ void gen_expr(Node *node)
 				default: break;
 				}
 			}
-			gen_expr(node->lhs);
+			gen_expr(node->lhs);	// 左項を計算
+			if(isVAR(node->rhs)){
+				LDX_V(node->rhs->str);
+				JSR("RDIVIDEX");
+				return;
+			}
+			if(isNUM(node->rhs)){
+				LDX_I(node->rhs->val);
+				JSR("RDIVIDEX");
+				return;
+			}
+			if(isARRAY(node->rhs) && is_simple_array(node->rhs)){
+				int offset;
+				char *var = gen_array_laddress(node->rhs,"D",&offset);
+				if (var!=NULL) {
+					LDX_V(var);
+					JSR("RDIVIDEX");
+					return;
+				}
+			}
 			char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 			STD_V(tmp);
 			gen_expr(node->rhs);
-			LDX_V_I(tmp);
-			JSR("DIVIDE");
+			LDX_V(tmp);
+			JSR("DIVIDEX");
 			lv_free_reg(tmp);
 			}
 			break;
@@ -3379,6 +3471,37 @@ gen_stmt(Node *node)
 				return;
 			}
 			gen_expr(node->lhs);							// if 式 の演算結果はAccABに入る’
+			printf("; ND_IFGOTO\n");
+			dump_loc_table();
+			int v1,v2;
+			if(lv_search_reg_const("A",&v1)){				// AccA=0?
+				if(v1==0){									// yes. test only regB
+					printf("; ND_IFGOTO AccA=0, omit branch\n");
+					TSTB();
+					Bxx("EQ",IF_FALSE);
+					JMP(GOTOLINE);
+					LABEL(IF_FALSE);
+					return;	
+				}else{										// AccA!=0, branch always
+					printf("; ND_IFGOTO AccA!=0, branch always\n");
+					JMP(GOTOLINE);
+					return;
+				}
+			}
+			if(lv_search_reg_const("A",&v2)){				// AccB=0?
+				if(v2==0){									// yes. test only regB
+					printf("; ND_IFGOTO AccB=0, omit branch\n");
+					TSTA();
+					Bxx("EQ",IF_FALSE);
+					JMP(GOTOLINE);
+					LABEL(IF_FALSE);
+					return;	
+				}else{										// AccB!=0, branch always
+					printf("; ND_IFGOTO AccB!=0, branch always\n");
+					JMP(GOTOLINE);
+					return;
+				}
+			}
 			TSTB();
 			Bxx("NE",IF_TRUE);
 			TSTA();
@@ -3911,6 +4034,9 @@ epilogue()
 	RMB("_CALLRET",2);
 	printf("_TIMER\tEQU\t$000A\n");
 	printf("_CURSOR\tEQU\t$000F\n");
+	for(int i=0; i<const_count; i++){
+			FDB_V(const_table_s[i],const_table[i]);
+	}
 	for(int i=1; i<=for_count; i++){
 		if(FORTO[i].to){
 			char	comment[256];
