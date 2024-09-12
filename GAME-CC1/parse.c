@@ -136,11 +136,11 @@ print_binary_node(char *name,Node *node)
 }
 void
 print_var_node(char *name,Node *node){
-	printf("(%s str=%s)",name,node->str);
+	printf("(%s %s)",name,node->str);
 }
 void
 print_array_node(char *name,Node *node){
-	printf("(%s str=%s ",name,node->str);
+	printf("(%s %s ",name,node->str);
 	print_nodes(node->lhs);
 	printf(")");
 }
@@ -568,6 +568,9 @@ Token *tokenize()
 			}
 			if(*p!=' '){
 //				printf(";REM mark '%c' found. skip line\n",*p);
+				if(*p=='\t'){
+					error_at(p,"TAB found.\n");
+				}
 				char	*rem = get_least_line(p);
 				if(*p=='#')	{ // Assembler extension
 					cur = new_token(TK_ASM, cur, rem+1,strlen(rem+1));
@@ -1184,11 +1187,12 @@ Node	*stmt()
 			}else if(pa->nk==ND_NEXT){
 //				printf("; may be NEXT\n");
 				if(ex->lhs!=NULL && !isVAR(ex->lhs)){
-					error("NEXT has no control variable");
-					return NULL;
+					printf("; NEXT has no control variable:");print_nodes_ln(ex);
+					node = new_node(ND_NOP);
+				}else{
+					node->str=ex->lhs->str;
+					node->val=NEXT_found(node->str);
 				}
-				node->str=ex->lhs->str;
-				node->val=NEXT_found(node->str);
 			}else if(pa->nk==ND_PRINTR){
 //				printf("; ND_PRINTR\n");
 //				printf("; ");print_nodes_ln(ex);

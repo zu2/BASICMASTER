@@ -62,7 +62,7 @@ void	dump_loc_table()
 		if(p->kind>0){
 			printf("; %d ",i);
 			switch(p->kind){
-			case LOC_USED:	printf("LOC_USED   : used for tempoary save\n");
+			case LOC_USED:	printf("LOC_USED   : %s used for tempoary save\n",p->reg);
 							break;
 			case LOC_CONST:	{
 								if(strcmp(p->reg,"D")==0 && (p->val>32767)){
@@ -198,6 +198,18 @@ void	lv_free_tmp(char *v)
 		}
 	}
 //	printf("; lv_free_var end\n");fflush(stdout);
+}
+//
+//	一時変数(LOC_USED)の情報を消す
+//
+void	lv_free_used()
+{
+	for(int i=0; i<loc_table_size; i++){
+		loc_table_t *p = &loc_table[i];
+		if(p->kind==LOC_USED){
+			lv_free_tmp(p->reg);
+		}
+	}
 }
 //
 //	空きを探してその番号を返す。空きがなければエラー（ひどい）
@@ -496,7 +508,7 @@ void	lv_add_reg_array_nofree(char *r, loc_type_t kind, char *var1, char *var2, i
 //
 void	lv_add_reg_array(char *r, loc_type_t kind, char *var1, char *var2, int offset)
 {
-	printf("; lv_add_reg_array %s=%s,%s,%d\n",r,var1,var2,offset);fflush(stdout);
+//	printf("; lv_add_reg_array %s=%s,%s,%d\n",r,var1,var2,offset);fflush(stdout);
 	if((kind!=LOC_LARRAY1)&&(kind!=LOC_LARRAY2)&&(kind!=LOC_LADRS)){
 		error("; lv_add_reg_array: illegal kind %d\n",kind);
 	}
@@ -811,8 +823,8 @@ void	ASLD()
 {
 		int e;
 		int val;
-		if((e=lv_search_reg_const("D",&val))
-		&& val==0){
+		if((e=lv_search_reg_const("D",&val)) && val==0){
+//			printf("; ASLD Dreg=%d\n",val);
 			return;
 		}
 		printf("\tASLB\n");
@@ -1030,25 +1042,39 @@ void	LDAr_V(char *r,char *v)
 			error("; illegal register name %s\n",r);
 		}
 }
-void	LDAr_X(char *r,int v)						// TODO: 名前はLDAr_X0 がいい？
+void	LDAr_X0(char *r,int v)
 {
 		printf("\tLDA%s\t%d,X\n",r,v);
-		lv_free_reg(r);
-		lv_free_reg("D");
+}
+void	LDAr_X1(char *r,int v)
+{
+		printf("\tLDA%s\t%d,X\n",r,v+1);
 }
 void	LDAA_X0(int v)
 {
-		LDAr_X("A",v);
+		LDAr_X0("A",v);
 }
 void	LDAB_X0(int v)
 {
-		LDAr_X("B",v);
+		LDAr_X0("B",v);
 }
 void	LDAB_X1(int v)
 {
-		LDAr_X("B",v+1);
+		LDAr_X1("B",v+1);
 }
-void	LDAr_IVX(char *r,Node *node)
+void	LDAr_X(char *r,int v)						// TODO: 名前はLDAr_X0 がいい？
+{
+		if(strcmp(r,"A")==0){
+			LDAA_X0(v);
+		}else if(strcmp(r,"B")==0){
+			LDAB_X1(v);
+		}else{
+			error("; illegal register name %s\n",r);
+		}
+		lv_free_reg(r);
+		lv_free_reg("D");
+}
+void	LDAr_IVX(char *r,Node *node,int offset)
 {
 		if(isNUM(node)){
 			if(strcmp(r,"A")==0){
@@ -1060,20 +1086,20 @@ void	LDAr_IVX(char *r,Node *node)
 			}
 		}else if(isVAR(node)){
 			LDAr_V(r,node->str);
-		}else if(node->kind==ND_STACKTOP){
-			LDAr_X(r,node->val);
+		}else if(node->kind==ND_ARRAY2){
+			LDAr_X(r,offset);
 		}else{
 			printf("; LDA%s_IVX:",r);print_nodes_ln(node);
 			error("; LDA%s_IVX ",r);
 		}
 }
-void	LDAA_IVX(Node *node)
+void	LDAA_IVX(Node *node,int offset)
 {
-		LDAr_IVX("A",node);
+		LDAr_IVX("A",node,offset);
 }
-void	LDAB_IVX(Node *node)
+void	LDAB_IVX(Node *node,int offset)
 {
-		LDAr_IVX("B",node);
+		LDAr_IVX("B",node,offset);
 }
 void	LDD_I(int v)
 {
@@ -1318,14 +1344,14 @@ void	SUB_L(char *v)
 		printf("\tSBCA\t%s\n",		v);
 		lv_free_reg_ABD();
 }
-void	SUB_IVX(Node *node)		// SUB # or Var or n,X
+void	SUB_IVX(Node *node,int offset)		// SUB # or Var or n,X
 {
 		if(isNUM(node)){
 			SUB_I(node->val);
 		}else if(isVAR(node)){
 			SUB_V(node->str);
-		}else if(node->kind==ND_STACKTOP){
-			SUB_X(node->val);
+		}else if(node->kind==ND_ARRAY2){
+			SUB_X(offset);
 		}else{
 			printf("; SUB_IVX:");print_nodes_ln(node);
 			error("; SUB_IVX ");
@@ -1579,9 +1605,17 @@ void	CMPA_X(int v)
 {
 		CMPr_X0("A",v);
 }
+void	CMPA_X0(int v)
+{
+		CMPr_X0("A",v);
+}
 void	CMPB_X(int v)
 {
-		CMPr_X0("B",v);
+		CMPr_X1("B",v);
+}
+void	CMPB_X1(int v)
+{
+		CMPr_X1("B",v);
 }
 void	CMPA_V0(char *str)
 {
@@ -1607,27 +1641,27 @@ void	CMPB_V(char *str)
 {
 		CMPB_V1(str);
 }
-void	CMPA_IVX(Node *node)
+void	CMPA_IVX(Node *node,int offset)
 {
 		if(isNUM(node)){
 			CMPA_I(high(node->val));
 		}else if(isVAR(node)){
 			CMPA_V(node->str);
-		}else if(node->kind==ND_STACKTOP){
-			CMPA_X(node->val);
+		}else if(node->kind==ND_ARRAY2){
+			CMPA_X0(offset);
 		}else{
 			printf("; CMPA_IVX:");print_nodes_ln(node);
 			error("; CMPA_IVX ");
 		}
 }
-void	CMPB_IVX(Node *node)
+void	CMPB_IVX(Node *node,int offset)
 {
 		if(isNUM(node)){
 			CMPB_I(low(node->val));
 		}else if(isVAR(node)){
 			CMPB_V(node->str);
-		}else if(node->kind==ND_STACKTOP){
-			CMPB_X(node->val+1);
+		}else if(node->kind==ND_ARRAY2){
+			CMPB_X1(offset);
 		}else{
 			printf("; CMPB_IVX:");print_nodes_ln(node);
 			error("; CMPB_IVX ");
@@ -1736,7 +1770,7 @@ void	LDX_Vp(char *str,int n)
 		if(abs(n)%256!=0){
 			error("; error LDX_vp %s %d\n",str,n);
 		}
-		printf("; LDX_Vp %s, offset=%d not found\n",str,n);
+//		printf("; LDX_Vp %s, offset=%d not found\n",str,n);
 		if(n>0){
 			for(int i=0; i<n; i+=256) INC_V0(str);
 			LDX_Vp_sub(str);
@@ -1746,7 +1780,7 @@ void	LDX_Vp(char *str,int n)
 			LDX_Vp_sub(str);
 			for(int i=0; i<abs(n); i+=256) INC_V0(str);
 		}
-		printf("; LDX_Vp %s, offset=%d loaded.\n",str,n);
+//		printf("; LDX_Vp %s, offset=%d loaded.\n",str,n);
 		lv_free_reg_X();
 		lv_add_reg_array("X",LOC_LARRAY1,str,"",n);
 }
@@ -1914,6 +1948,7 @@ void gen_expr(Node *node);
 //
 int is_simple_array(Node *node)
 {
+//	printf("; is_simple_array:");print_nodes_ln(node);
 	if(node==NULL || !isARRAY(node)){
 		printf("; not a array. why? ");print_nodes_ln(node);
 		error("; gen_array_address error\n");
@@ -2248,22 +2283,22 @@ gen_array_address(Node *node,char *save)
 
 //
 //	条件比較を見て短い分岐を作成する
-//		条件成立しなかった時にlabelに飛ぶ
+//		条件成立しなかった時にif_falseに飛ぶ
 //
 void
 gen_skip_if_false(Node *node,char *if_false)
 {
-//	printf("; gen_branch_if_true start\n");
+	printf("; gen_skip_if_false start\n");
 	// > (ND_VAR I) 10 )
 	if(node==NULL){
-//		printf(";branch_if_true node==NULL !\n");
+//		printf("; gen_skip_if_false node==NULL !\n");
 		return;
 	}
 	//printf("; compare node? ");print_nodes_ln(node);
 	if(!isCompare(node)){
 		error("not compare");
 	}
-//	printf("; gen_branch_if_true %s :",label);print_nodes_ln(node);
+//	printf("; gen_skip_if_false %s :",label);print_nodes_ln(node);
 	char	*if_true = new_label();
 	// 0との比較はサボれる場合がある
 	if(isNUM(node->rhs) && node->rhs->val==0
@@ -2309,7 +2344,7 @@ gen_skip_if_false(Node *node,char *if_false)
 		return;
 	}else if(isARRAY1(node->lhs) && isNUM(node->rhs) && isEQorNE(node)
 			&& node->rhs->val>=0 && node->rhs->val<=255){	// 間接1バイトとの ==,!=
-//		printf("; gen_branch_if_true ARRAY1 ==/!= 0-255\n");
+//		printf("; gen_skip_if_false ARRAY1 ==/!= 0-255\n");
 		int offset = gen_array_address(node->lhs,"");		// 配列アドレスがIXに入っている
 		LDAB_X0(offset);
 		if(node->rhs->val){			// LDAはZフラグが立つので0との比較は省略
@@ -2321,7 +2356,7 @@ gen_skip_if_false(Node *node,char *if_false)
 			Bxx("EQ",if_false);	
 		}
 	}else if(isARRAY2(node->lhs) && isNUMorVAR(node->rhs) && isEQorNE(node)){// 配列との ==,!= はCPXで
-//		printf("; gen_branch_if_true ARRAY2 ==/!= NUMorVAR\n");
+//		printf("; gen_skip_if_false ARRAY2 ==/!= NUMorVAR\n");
 		int offset = gen_array_address(node->lhs,"");		// 配列アドレスがIXに入っている
 		LDX_X(offset);
 		if(isNUM(node->rhs)){
@@ -2337,47 +2372,79 @@ gen_skip_if_false(Node *node,char *if_false)
 			Bxx("EQ",if_false);	
 		}
 		return;
-	}else if(isNUMorVAR(node->rhs)){			// 左は式、右は定数か変数
-		gen_expr(node->lhs);					// AccABに結果がある
-		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
-		case ND_EQ:	CMPB_IVX(node->rhs);
+	}else if(isNUMorVAR(node->rhs)
+		|| (isARRAY2(node->rhs) && is_simple_array(node->rhs))){// 右は定数か変数か単純配列
+		gen_expr(node->lhs);			// AccABに結果がある
+		int	 offset;
+		if(isARRAY2(node->rhs)){
+			char *tmp;
+			if((tmp=gen_array_laddress(node->rhs,"D",&offset))==NULL){
+				printf("; gen_skip_if_false: ");print_nodes_ln(node->rhs);
+				error("; gen_skip_if_false: gen_arrary_laddress returns NULL");
+			}
+			LDX_V(tmp);
+		}
+		printf("; gen_skip_if_false NUM or VAR or Simple Array:");print_nodes_ln(node);
+		switch(node->kind){ // if lhs(Acc)-rhs(M) then if_true otherwise jump to if_false
+		case ND_EQ:	CMPB_IVX(node->rhs,offset);
 					Bxx("NE",if_false);
-					CMPA_IVX(node->rhs);
+					CMPA_IVX(node->rhs,offset);
 					Bxx("NE",if_false);
 					break;
-		case ND_NE:	CMPB_IVX(node->rhs);
+		case ND_NE:	CMPB_IVX(node->rhs,offset);
 					Bxx("NE",if_true);
-					CMPA_IVX(node->rhs);
+					CMPA_IVX(node->rhs,offset);
 					Bxx("EQ",if_false);
 					break;
-		case ND_GE:	SUB_IVX(node->rhs);
-					Bxx("LT",if_false);
-					break;
-		case ND_GT:	SUB_IVX(node->rhs);
-					Bxx("GT",if_true);
-					Bxx("NE",if_false);
+		case ND_GE:	SUB_IVX(node->rhs,offset);		// lhs-rhs, AB>=M?
+					Bxx("LT",if_false);				// AB<M (N=1) then false
+					break;							// N=0, then true
+		case ND_GT:	SUB_IVX(node->rhs,offset);		// lhs-rhs,	AB>M?
+					Bxx("GT",if_true);				// AB>M then true
+					Bxx("NE",if_false);				// AB<M then false
 					TSTB();
-					Bxx("EQ",if_false);
+					Bxx("EQ",if_false);				// AB==M then false
 					break;
-		case ND_LE:	SUB_IVX(node->rhs);
-					Bxx("LT",if_true);
-					Bxx("NE",if_false);
+		case ND_LE:	SUB_IVX(node->rhs,offset);		// lhs-rhs, AB<=M?
+					Bxx("LT",if_true);				// AB<M (N=1) then true
+					Bxx("NE",if_false);				// AB>M then false
 					TSTB();
-					Bxx("NE",if_false);
+					Bxx("NE",if_false);				// AB>M then false
 					break;
-		case ND_LT:	SUB_IVX(node->rhs);
-					Bxx("GE",if_false);
-					break;
+		case ND_LT:	SUB_IVX(node->rhs,offset);		// lhs-rhs, AB<M?
+					Bxx("GE",if_false);				// AB>=M (N=0) then false
+					break;							// otherwise AB<M
 		default:
 					error("Bxx not known\n");
 		}
+		LABEL(if_true);
+		return;
+	}else if (isARRAY2(node->lhs) && is_simple_array(node->lhs)){
+		// 左が単純配列のときは左右入れ替えて生成
+		Node *new = new_binary(node->kind,node->rhs,node->lhs);
+		switch(node->kind){
+		case ND_EQ:	break;
+		case ND_NE: break;
+		case ND_GE: new->kind = ND_LE; break;
+		case ND_GT: new->kind = ND_LT; break;
+		case ND_LE: new->kind = ND_GE; break;
+		case ND_LT: new->kind = ND_GT; break;
+		default: 
+			printf("; gen_skip_if_false:");print_nodes_ln(node);
+			error("; what? unknown node kind");
+		}
+		printf("; gen_skip_if_false old:");print_nodes_ln(node);
+		printf("; gen_skip_if_false new:");print_nodes_ln(new);
+		gen_skip_if_false(new,if_false);
 		return;
 	}else{
+		printf("; gen_skip_if_false:");print_nodes_ln(node);
 		gen_expr(node->lhs);
 		char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 		STD_V(tmp);
 		gen_expr(node->rhs);
 		// 以下、AccAB(rhs)とStackTOP(lhs)を比較(rhs-lhsの値を見ている）
+		printf("; gen_skip_if_false expr expr:");print_nodes_ln(node);
 		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
 		case ND_EQ:	CMPB_V1(tmp);
 					Bxx("NE",if_false);
@@ -2389,23 +2456,23 @@ gen_skip_if_false(Node *node,char *if_false)
 					CMPA_V0(tmp);
 					Bxx("EQ",if_false);
 					break;
-		case ND_GE:	SUB_V(tmp);
-					Bxx("GE",if_false);	// rhs-lhs<0 (lhs<rhs) then true
-					break;
-		case ND_GT:	SUB_V(tmp);
-					Bxx("LT",if_true);
-					Bxx("NE",if_false);
+		case ND_GE:	SUB_V(tmp);			// rhs-lhs M>=AB?
+					Bxx("GT",if_false);	// M<AB then false
+					Bxx("NE",if_true);	// M>AB then true
 					TSTB();
-					Bxx("NE",if_false);
+					Bxx("NE",if_false);	// M<AB then false
 					break;
-		case ND_LE:	SUB_V(tmp);
-					Bxx("LT",if_false);
-					Bxx("NE",if_true);
-					TSTB();
+		case ND_GT:	SUB_V(tmp);			// rhs-lhs M>AB?
+					Bxx("GE",if_false);	// M<=AB then false		N=0
+					break;
+		case ND_LE:	SUB_V(tmp);			// rhs-lhs M<=AB?
+					Bxx("LT",if_false);	// M>AB	then false
+					break;
+		case ND_LT:	SUB_V(tmp);			// rhs-lhs M<AB?
+					Bxx("LT",if_false);	// M>AB then false	N=1
+					Bxx("NE",if_true);	// M<AB then true
+					TSTB();				// M==AB?
 					Bxx("EQ",if_false);
-					break;
-		case ND_LT:	SUB_V(tmp);
-					Bxx("LT",if_false);
 					break;
 		default:
 					error("Bxx not known\n");
@@ -2421,7 +2488,7 @@ gen_skip_if_false(Node *node,char *if_false)
 void
 gen_branch_if_true(Node *node,char *label)
 {
-//	printf("; gen_branch_if_true start\n");
+	printf("; gen_branch_if_true start\n");
 	// > (ND_VAR I) 10 )
 	if(node==NULL){
 //		printf(";branch_if_true node==NULL !\n");
@@ -2444,17 +2511,17 @@ gen_branch_if_true(Node *node,char *label)
 void
 gen_skip_if_true(Node *node,char *if_true)
 {
-//	printf("; gen_branch_if_false start\n");
+	printf("; gen_skip_if_true start\n");
 	// > (ND_VAR I) 10 )
 	if(node==NULL){
-		printf(";branch_if_false node==NULL !\n");
+		printf("; gen_skip_if_false node==NULL !\n");
 		return;
 	}
 	//printf("; compare node? ");print_nodes_ln(node);
 	if(!isCompare(node)){
 		error("not compare");
 	}
-//	printf("; gen_branch_if_false %s :",label);print_nodes_ln(node);
+//	printf("; gen_skip_if_true %s :",label);print_nodes_ln(node);
 	char	*if_false = new_label();
 	// 0との比較はサボれる場合がある
 	if(isNUM(node->rhs) && node->rhs->val==0
@@ -2500,7 +2567,7 @@ gen_skip_if_true(Node *node,char *if_true)
 		return;
 	}else if(isARRAY1(node->lhs) && isNUM(node->rhs) && isEQorNE(node)
 			&& node->rhs->val>=0 && node->rhs->val<=255){	// 間接1バイトとの ==,!=
-//		printf("; gen_branch_if_false ARRAY1 ==/!= 0-255\n");
+//		printf("; gen_skip_if_true ARRAY1 ==/!= 0-255\n");
 		int offset = gen_array_address(node->lhs,"");		// 配列アドレスがIXに入っている
 		LDAB_X0(offset);
 		if(node->rhs->val){			// LDAはZフラグが立つので0との比較は省略
@@ -2512,7 +2579,7 @@ gen_skip_if_true(Node *node,char *if_true)
 			Bxx("NE",if_true);	
 		}
 	}else if(isARRAY2(node->lhs) && isNUMorVAR(node->rhs) && isEQorNE(node)){// 配列との ==,!= はCPXで
-//		printf("; gen_branch_if_false ARRAY2 ==/!= NUMorVAR\n");
+//		printf("; gen_skip_if_true ARRAY2 ==/!= NUMorVAR\n");
 		int offset = gen_array_address(node->lhs,"");		// 配列アドレスがIXに入っている
 		LDX_X(offset);
 		if(isNUM(node->rhs)){
@@ -2528,49 +2595,77 @@ gen_skip_if_true(Node *node,char *if_true)
 			Bxx("NE",if_true);	
 		}
 		return;
-	}else if(isNUMorVAR(node->rhs)){			// 左は式、右は定数か変数
+	}else if(isNUMorVAR(node->rhs)									// 左は式、右は定数か変数
+	      ||(isARRAY2(node->rhs) && is_simple_array(node->rhs))){	// もしくは単純配列
 		gen_expr(node->lhs);					// AccABに結果がある
-		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
-		case ND_EQ:	CMPB_IVX(node->rhs);
+		int	 offset;
+		if(isARRAY2(node->rhs)){
+			char *tmp;
+			if((tmp=gen_array_laddress(node->rhs,"D",&offset))==NULL){
+				printf("; gen_skip_if_true: ");print_nodes_ln(node->rhs);
+				error("; gen_skip_if_true: gen_arrary_laddress returns NULL");
+			}
+			LDX_V(tmp);
+		}
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_true
+		case ND_EQ:	CMPB_IVX(node->rhs,offset);	// AB==M?
 					Bxx("NE",if_false);
-					CMPA_IVX(node->rhs);
+					CMPA_IVX(node->rhs,offset);
 					Bxx("EQ",if_true);
 					break;
-		case ND_NE:	CMPB_IVX(node->rhs);
+		case ND_NE:	CMPB_IVX(node->rhs,offset);	// AB!=M?
 					Bxx("NE",if_true);
-					CMPA_IVX(node->rhs);
+					CMPA_IVX(node->rhs,offset);
 					Bxx("NE",if_true);
 					break;
-		case ND_GE:	SUB_IVX(node->rhs);
-					Bxx("GE",if_true);
+		case ND_GE:	SUB_IVX(node->rhs,offset);	// lhs-rhs, AB>=M?
+					Bxx("GE",if_true);			// AB>=M (N=0) then true
 					break;
-		case ND_GT:	SUB_IVX(node->rhs);
-					Bxx("LT",if_false);
-					Bxx("NE",if_true);
+		case ND_GT:	SUB_IVX(node->rhs,offset);	// lhs-rhs, AB>M?
+					Bxx("LT",if_false);			// AB<M then false
+					Bxx("NE",if_true);			// AB>M	then true
 					TSTB();
-					Bxx("NE",if_true);
+					Bxx("NE",if_true);			// AB>M then true
 					break;
-		case ND_LE:	SUB_IVX(node->rhs);
-					Bxx("GT",if_false);
-					Bxx("NE",if_true);
+		case ND_LE:	SUB_IVX(node->rhs,offset);	// lhs-rhs, AB<=M?
+					Bxx("GT",if_false);			// AB>M	then false
+					Bxx("NE",if_true);			// AB<M then true
 					TSTB();
-					Bxx("EQ",if_true);
+					Bxx("EQ",if_true);			// AB==M then true
 					break;
-		case ND_LT:	SUB_IVX(node->rhs);
-					Bxx("LT",if_true);
+		case ND_LT:	SUB_IVX(node->rhs,offset);	// lhs-rhs, AB<=M?
+					Bxx("LT",if_true);			// AB<M	 then true
 					break;
 		default:
 					error("Bxx not known\n");
 		}
 		LABEL(if_false);
 		return;
+	}else if (isARRAY2(node->lhs) && is_simple_array(node->lhs)){
+		// 左が単純配列のときは左右入れ替えて生成
+		Node *new = new_binary(node->kind,node->rhs,node->lhs);
+		switch(node->kind){
+		case ND_EQ:	break;
+		case ND_NE: break;
+		case ND_GE: new->kind = ND_LE; break;
+		case ND_GT: new->kind = ND_LT; break;
+		case ND_LE: new->kind = ND_GE; break;
+		case ND_LT: new->kind = ND_GT; break;
+		default: 
+			printf("; gen_skip_if_true:");print_nodes_ln(node);
+			error("; what? unknown node kind");
+		}
+		printf("; gen_skip_if_true old:");print_nodes_ln(node);
+		printf("; gen_skip_if_true new:");print_nodes_ln(new);
+		gen_skip_if_true(new,if_true);
+		return;
 	}else{
 		gen_expr(node->lhs);
 		char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 		STD_V(tmp);
 		gen_expr(node->rhs);
-		// 以下、AccAB(rhs)とStackTOP(lhs)を比較(rhs-lhsの値を見ている）
-		switch(node->kind){ // if cc then jump to label otherwise jump to if_false
+		// 以下、AccAB(rhs)とtmp(lhs)を比較(rhs-lhsの値を見ている）
+		switch(node->kind){ // if cc then jump to label otherwise jump to if_true
 		case ND_EQ:	CMPB_V1(tmp);
 					Bxx("NE",if_false);
 					CMPA_V0(tmp);
@@ -2581,24 +2676,23 @@ gen_skip_if_true(Node *node,char *if_true)
 					CMPA_V0(tmp);
 					Bxx("NE",if_true);
 					break;
-		case ND_LT:	//print_debug("ND_LT"); // lhs < rhs?   (ie. rhs-lhs>0)
-					SUB_V(tmp);
-					Bxx("GE",if_true);	// rhs-lhs<0 (lhs<rhs) then true
-					break;
-		case ND_LE:	SUB_V(tmp);
-					Bxx("LT",if_false);
-					Bxx("NE",if_true);
+		case ND_LT:	SUB_V(tmp);				// rhs-lhs, AB>M?
+					Bxx("LT",if_false);		// M<AB then false
+					Bxx("NE",if_true);		// M>AB then true
 					TSTB();
-					Bxx("NE",if_true);
+					Bxx("NE",if_true);		// M!=AB then true
 					break;
-		case ND_GT:	SUB_V(tmp);
-					Bxx("LT",if_true);
-					Bxx("NE",if_false);
+		case ND_LE:	SUB_V(tmp);				// rhs-lhs, AB>=M?
+					Bxx("GE",if_true);		// M<=AB then true
+					break;
+		case ND_GT:	SUB_V(tmp);				// rhs-lhs, AB<M?
+					Bxx("LT",if_true);		// M<AB then true
+					break;
+		case ND_GE:	SUB_V(tmp);				// rhs-lhs, AB=<M?
+					Bxx("LT",if_true);		//  M>AB then true
+					Bxx("NE",if_false);		//  M<AB then false
 					TSTB();
-					Bxx("EQ",if_true);
-					break;
-		case ND_GE:	SUB_V(tmp);
-					Bxx("LT",if_true);
+					Bxx("EQ",if_true);		//	M==AB then true
 					break;
 		default:
 					error("Bxx not known\n");
@@ -2614,7 +2708,7 @@ gen_skip_if_true(Node *node,char *if_true)
 void
 gen_branch_if_false(Node *node,char *label)
 {
-//	printf("; gen_branch_if_false start\n");
+	printf("; gen_branch_if_false start\n");
 	// > (ND_VAR I) 10 )
 	if(node==NULL){
 		printf(";branch_if_false node==NULL !\n");
@@ -2667,23 +2761,45 @@ void gen_ARRAY1(Node *node)
 //	乗算をシフト演算に変換する
 //		変換できたら!=0、できなければ0
 //		左項はgen_exprで展開済みで、AccABに入っている
+//		左項が変数のときは、varに変数名が入ってくる（その他はvar==NULL)
 //
-int	MULtoSHIFT(Node *node)
+int	MULtoSHIFT(Node *node,char *var)
 {
+//	printf("; MULtoSHIFT:%s,",(var==NULL?"NULL":var));print_nodes_ln(node);
 	if(!isNUM(node)){
 		return 0;
 	}
 	int	shift=0;
-	char *tmp;
+	char *tmp = var;
 	switch(node->val){
 	case 256:
 		MUL256();
 		return 1;
+	case 11:
+	case 13:
+		if(var==NULL){
+			tmp = lv_search_free_tmp();
+			STD_V(tmp);
+		}
+		ASLD_N(1);		// x2=x*2
+		ADD_V(tmp);		// x3=x2+1
+		ASLD_N(2);		// x12=x3*4
+		if(node->val==11){
+			SUB_V(tmp);
+		}else if(node->val==13){
+			ADD_V(tmp);
+		}
+		if(var==NULL){
+			lv_free_reg(tmp);
+		}
+		return 1;
 	case 20:
 	case 10:
 	case 5:
-		tmp = lv_search_free_tmp();
-		STD_V(tmp);
+		if(var==NULL){
+			tmp = lv_search_free_tmp();
+			STD_V(tmp);
+		}
 		ASLD_N(2);
 		ADD_V(tmp);
 		if(node->val==20){
@@ -2692,13 +2808,17 @@ int	MULtoSHIFT(Node *node)
 		}else if(node->val==10){
 			ASLD();
 		}
-		lv_free_reg(tmp);
+		if(var==NULL){
+			lv_free_reg(tmp);
+		}
 		return 1;
 	case 12:
 	case 6:
 	case 3:
-		tmp = lv_search_free_tmp();
-		STD_V(tmp);
+		if(var==NULL){
+			tmp = lv_search_free_tmp();
+			STD_V(tmp);
+		}
 		ASLD_N(1);
 		ADD_V(tmp);
 		if(node->val==12){
@@ -2707,41 +2827,55 @@ int	MULtoSHIFT(Node *node)
 		}else if(node->val==6){
 			ASLD();
 		}
-		lv_free_reg(tmp);
+		if(var==NULL){
+			lv_free_reg(tmp);
+		}
 		return 1;
 	case 18:
 	case 9:
-		tmp = lv_search_free_tmp();
-		STD_V(tmp);
+		if(var==NULL){
+			tmp = lv_search_free_tmp();
+			STD_V(tmp);
+		}
 		ASLD_N(3);
 		ADD_V(tmp);
 		if(node->val==18){
 			ASLD();
 		}
-		lv_free_reg(tmp);
+		if(var==NULL){
+			lv_free_reg(tmp);
+		}
 		return 1;
 	case 14:
 	case 7:
-		tmp = lv_search_free_tmp();
-		STD_V(tmp);
+		if(var==NULL){
+			tmp = lv_search_free_tmp();
+			STD_V(tmp);
+		}
 		ASLD_N(3);
 		SUB_V(tmp);
 		if(node->val==14){
 			ASLD();
 		}
-		lv_free_reg(tmp);
+		if(var==NULL){
+			lv_free_reg(tmp);
+		}
 		return 1;
 	case 17:
 	case 15:
-		tmp = lv_search_free_tmp();
-		STD_V(tmp);
+		if(var==NULL){
+			tmp = lv_search_free_tmp();
+			STD_V(tmp);
+		}
 		ASLD_N(4);
 		if(node->val==15){
 			SUB_V(tmp);
 		}else{
 			ADD_V(tmp);
 		}
-		lv_free_reg(tmp);
+		if(var==NULL){
+			lv_free_reg(tmp);
+		}
 		return 1;
 	case 128:	shift++;
 	case 64:	shift++;
@@ -2750,7 +2884,10 @@ int	MULtoSHIFT(Node *node)
 	case 8:		shift++;
 	case 4:		shift++;
 	case 2:		shift++;
+//		printf("; ASLD_N(%d)\n",shift);
 		ASLD_N(shift);
+		return 1;
+	case 1:
 		return 1;
 	default:;
 	}
@@ -2792,6 +2929,7 @@ void gen_expr(Node *node)
 			LDD_IV("LPGEND");
 			return;
 	case ND_INKEY:
+			LDAA_I('_');
 			JSR("ASCIN");
 			TAB();
 			CLRA();
@@ -2949,10 +3087,10 @@ void gen_expr(Node *node)
 	case ND_SUB: {
 				gen_expr(node->lhs);
 				if(isNUMorVAR(node->rhs)){
-					SUB_IVX(node->rhs);
+					SUB_IVX(node->rhs,0);
 					return;
 				}
-				if(isARRAY(node->rhs) && is_simple_array(node->rhs)){
+				if(isARRAY2(node->rhs) && is_simple_array(node->rhs)){
 					int offset;
 					char *var = gen_array_laddress(node->rhs,"D",&offset);
 					if (var!=NULL) {
@@ -3018,7 +3156,11 @@ void gen_expr(Node *node)
 			}
 			if(isNUM(node->rhs)){
 				gen_expr(node->lhs);
-				if(MULtoSHIFT(node->rhs)){
+				char *var=NULL;
+				if(isVAR(node->lhs)){
+					var = node->lhs->str;
+				}
+				if(MULtoSHIFT(node->rhs,var)){
 					return;
 				}
 //				tmp = add_const_table(node->rhs->val);
@@ -3146,7 +3288,7 @@ void gen_expr(Node *node)
 				JSR("RDIVIDEX");
 				return;
 			}
-			if(isARRAY(node->rhs) && is_simple_array(node->rhs)){
+			if(isARRAY2(node->rhs) && is_simple_array(node->rhs)){
 				int offset;
 				char *var = gen_array_laddress(node->rhs,"D",&offset);
 				if (var!=NULL) {
@@ -3275,6 +3417,8 @@ gen_stmt(Node *node)
 		if(usedLINENO(node->val)){
 			LABEL(new_line_label(node->val));
 			lv_free_all();	// レジスタ割り当て全てクリア
+		}else{
+			lv_free_used();	// 一時利用領域クリア
 		}
 		current = node;
 		dump_loc_table();
@@ -3299,7 +3443,7 @@ gen_stmt(Node *node)
 //				printf("; debug ND_SETVAR?? ");print_nodes_ln(node);
 				gen_expr(rhs);
 				gen_store_var(lhs);
-			}else if(lhs->kind==ND_ARRAY1){
+			}else if(lhs->kind==ND_ARRAY1){		// var:x) への代入
 //				printf("; debug ND_ASSIGN to ND_ARRAY1:");print_nodes_ln(node);
 				if(isNUM(rhs) && rhs->val==0){
 					int	offset = gen_array_address(lhs,"");	// X=adrs, offset=subscript
@@ -3307,8 +3451,17 @@ gen_stmt(Node *node)
 					return;
 				}else if(isNUMorVAR(rhs)){
 					int	offset = gen_array_address(lhs,"");	// X=adrs, offset=subscript
-					LDAB_IVX(rhs);
+					LDAB_IVX(rhs,0);
 					STAB_X0(offset);
+					return;
+				}else if(isARRAY1(rhs) && is_simple_array(rhs)){
+					int	off1,off2;
+					char *tmp2 = gen_array_laddress(rhs,"",&off2);
+					char *tmp1 = gen_array_laddress(lhs,"",&off1);
+					LDX_V(tmp2);
+					LDAB_X0(off2);
+					LDX_V(tmp1);
+					STAB_X0(off1);
 					return;
 				}
 #if	1
@@ -3471,33 +3624,32 @@ gen_stmt(Node *node)
 				return;
 			}
 			gen_expr(node->lhs);							// if 式 の演算結果はAccABに入る’
-			printf("; ND_IFGOTO\n");
-			dump_loc_table();
+//			dump_loc_table();
 			int v1,v2;
 			if(lv_search_reg_const("A",&v1)){				// AccA=0?
 				if(v1==0){									// yes. test only regB
-					printf("; ND_IFGOTO AccA=0, omit branch\n");
+//					printf("; ND_IFGOTO AccA=0, omit branch\n");
 					TSTB();
 					Bxx("EQ",IF_FALSE);
 					JMP(GOTOLINE);
 					LABEL(IF_FALSE);
 					return;	
 				}else{										// AccA!=0, branch always
-					printf("; ND_IFGOTO AccA!=0, branch always\n");
+//					printf("; ND_IFGOTO AccA!=0, branch always\n");
 					JMP(GOTOLINE);
 					return;
 				}
 			}
 			if(lv_search_reg_const("A",&v2)){				// AccB=0?
 				if(v2==0){									// yes. test only regB
-					printf("; ND_IFGOTO AccB=0, omit branch\n");
+//					printf("; ND_IFGOTO AccB=0, omit branch\n");
 					TSTA();
 					Bxx("EQ",IF_FALSE);
 					JMP(GOTOLINE);
 					LABEL(IF_FALSE);
 					return;	
 				}else{										// AccB!=0, branch always
-					printf("; ND_IFGOTO AccB!=0, branch always\n");
+//					printf("; ND_IFGOTO AccB!=0, branch always\n");
 					JMP(GOTOLINE);
 					return;
 				}
@@ -3753,8 +3905,8 @@ gen_stmt(Node *node)
 				int offset = gen_array_address(node->lhs,"");	// IXにA(I) or A:I)のアドレスが入る
 				if(node->lhs->kind==ND_ARRAY1){
 					LDAB_X0(offset);
-					STAB_V(node->str);
-					CLR_V0(node->str);
+					CLRA();
+					STD_V(node->str);
 				}else if(node->lhs->kind==ND_ARRAY2){
 					LDX_X(offset);
 					STX_V(node->str);

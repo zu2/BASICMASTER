@@ -180,8 +180,13 @@ Node	*node_opt(Node	*old)
 //			printf("; optimize ND_MUL Multiplication of the results of comparison operations\n");
 			return new_binary(ND_RELADD, node->lhs, node->rhs);
 		}
-		// 左が定数または変数で、右がそれ以外なら入れ替える
-		if(isNUMorVAR(node->lhs) && !isNUMorVAR(node->rhs)){
+		if(isNUM(node->lhs) && !isNUM(node->rhs)){	// 左が定数で、右がそれ以外なら入れ替える
+			node = new_copy_node(old);
+			node->lhs = old->rhs;
+			node->rhs = old->lhs;
+			return	node;
+		}
+		if(isVAR(node->lhs) && !isNUM(node->rhs)){	// 左が変数で右が定数以外
 			node = new_copy_node(old);
 			node->lhs = old->rhs;
 			node->rhs = old->lhs;
@@ -240,8 +245,11 @@ Node	*node_opt(Node	*old)
 		if(isNUM(node->lhs) && isNUM(node->rhs)){
 			return new_node_num(node->lhs->val * node->rhs->val);
 		}
-		// 左辺が定数または変数で、右辺がそれ以外なら入れ替える
-		if(isNUMorVAR(node->lhs) && !isNUMorVAR(node->rhs)){
+		if(isNUM(node->lhs) && !isNUM(node->rhs)){ // 左が定数で、右がそれ以外なら入れ替える
+			node = new_copy_node(old);
+			node->lhs = old->rhs;
+			node->rhs = old->lhs;
+		}else if(isVAR(node->lhs) && !isNUM(node->rhs)){ // 左辺が変数で、右辺が定数以外
 			node = new_copy_node(old);
 			node->lhs = old->rhs;
 			node->rhs = old->lhs;
@@ -253,21 +261,29 @@ Node	*node_opt(Node	*old)
 //		printf("; optimize ND_MUL rhs val=%d\n",node->rhs->val);
 		// 以下は右辺が定数値 (左辺が定数・変数でないときに注意）
 		switch(node->rhs->val){
+#if	0
+		// codegen.c で対処する
 		case -32:	return new_ASLD(node_opt(new_unary(ND_NEG,node->lhs)),5);
 		case -16:	return new_ASLD(node_opt(new_unary(ND_NEG,node->lhs)),4);
 		case -8:	return new_ASLD(node_opt(new_unary(ND_NEG,node->lhs)),3);
 		case -4:	return new_ASLD(node_opt(new_unary(ND_NEG,node->lhs)),2);
 		case -2:	return new_ASLD(node_opt(new_unary(ND_NEG,node->lhs)),1);
+#endif
 		case -1:	return new_unary(ND_NEG,node->lhs);
 		case 0:		return new_node_num(0);
 		case 1:		return node->lhs;
+#if	0
+		// codegen.c で対処する
 		case 2:		return new_ASLD(node->lhs,1);
 		case 4:		return new_ASLD(node->lhs,2);
 		case 8:		return new_ASLD(node->lhs,3);
 		case 16:	return new_ASLD(node->lhs,4);
 		case 32:	return new_ASLD(node->lhs,5);
+#endif
 		default:	break;
 		}
+#if	0
+		// codegen.c で対処する
 		if(isNUMorVAR(node->lhs)){		// 左辺が定数か変数の場合
 			switch(node->rhs->val){
 			case 3:		return new_binary(ND_ADD,new_ASLD(node->lhs,1),node->lhs);
@@ -275,6 +291,14 @@ Node	*node_opt(Node	*old)
 			case 10:	return new_ASLD(new_binary(ND_ADD, new_ASLD(node->lhs,2),node->lhs),1);
 			default:	break;
 			}
+		}
+#endif
+		if(node->rhs->val<0){
+			printf("; optimize ND_MUL:");
+			printf(";   ");print_nodes_ln(node);
+			node = new_unary(ND_NEG,new_binary(ND_MUL,node->lhs,new_node_num(abs(node->rhs->val))));
+			printf("; =>");print_nodes_ln(node);
+			return	node;
 		}
 		// 左辺が式の場合は一時領域が必要なので、ここでは最適化できない。残念
 		return	node;
@@ -568,7 +592,7 @@ optimize_for_loop()
 				if(node_n->kind==ND_SETVAR
 				&& strcmp(node_n->str,node_f->str)==0){	// 制御変数への代入がある
 					ofl[n].opt = 0;
-					printf("; break control var:");print_nodes_ln(node_n);
+//					printf("; break control var:");print_nodes_ln(node_n);
 					break;
 				}
 				// (ND_ASSIGN (ND_VAR B) (ND_NUM 1))
@@ -576,7 +600,7 @@ optimize_for_loop()
 				&& isVAR(node_n->lhs)
 				&& strcmp(node_n->lhs->str,node_f->str)){
 					ofl[n].opt = 0;
-					printf("; break control var:");print_nodes_ln(node_n);
+//					printf("; break control var:");print_nodes_ln(node_n);
 					break;
 				}
 				if((  (node_n->kind==ND_INCVAR)			// 制御変数への代入がある
@@ -586,12 +610,12 @@ optimize_for_loop()
 					||(node_n->kind==ND_NEGVAR))
 				&& strcmp(node_n->str,node_f->str)){
 					ofl[n].opt = 0;
-					printf("; break control var:");print_nodes_ln(node_n);
+//					printf("; break control var:");print_nodes_ln(node_n);
 					break;
 				}
 				if(node_n->kind==ND_GOSUB){				// GOSUBがあると制御変数が不確定
 					odl[n].opt = 0;
-					printf("; find gosub:");print_nodes_ln(node_n);
+//					printf("; find gosub:");print_nodes_ln(node_n);
 					break;
 				}
 				optimize_for_array_search(n,node_f->str,node_n);
@@ -914,5 +938,39 @@ optimize_do_loop()
 		node->val = i;
 		code[cnode] = node;
 //		printf("; => ");print_nodes_ln(node);
+	}
+}
+
+void
+fusion_ifgoto()
+{
+	int	codeend=0;
+	while(code[codeend]){		// 末尾を探す
+		codeend++;
+	}
+	for(int i=codeend-2; i>=0; i--){
+		if((code[i]->kind==ND_IF)
+		&& (code[i+1]->kind==ND_GOTO)){
+			code[i]->kind=ND_IFGOTO;
+			code[i]->val=code[i+1]->val;
+			code[i+1]->kind=ND_NOP;
+		}
+	}
+}
+
+void
+delete_nop()
+{
+	int	codeend=0;
+	while(code[codeend]){		// 末尾を探す
+		codeend++;
+	}
+	for(int i=codeend-1; i>=0; i--){
+		if(code[i]->kind==ND_NOP){
+			for(int j=i; j<codeend; j++){
+				code[j]=code[j+1];
+			}
+			codeend--;
+		}
 	}
 }

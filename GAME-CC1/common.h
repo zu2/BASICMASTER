@@ -216,6 +216,8 @@ Node	*node_opt(Node *node);
 void	multi_statement_optimize();
 void	optimize_for_loop();
 void	optimize_do_loop();
+void	fusion_ifgoto();
+void	delete_nop();
 
 typedef	struct	{
 		char		*var;			// loop counter
