@@ -213,6 +213,7 @@ int		isSameARRAY(Node *x,Node *y);
 int		isADDorSUB(Node *node);
 int		has_side_effect(Node *node);
 Node	*node_opt(Node *node);
+Node	*const_opt(Node *node);
 void	multi_statement_optimize();
 void	optimize_for_loop();
 void	optimize_do_loop();

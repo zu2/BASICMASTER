@@ -419,6 +419,157 @@ Node	*node_opt(Node	*old)
 	return	node;
 }
 
+//
+//	式は定数になるかどうか
+//		返り値がND_NUMなら定数
+//
+Node	*
+const_opt(Node *old)
+{
+	static	int	cc=0;
+	Node	*opt;
+	Node	*node = old;
+
+	switch(old->kind){
+	case ND_NONE:
+	case ND_VAR:
+	case ND_NUM:
+	case ND_LINENUM:
+	case ND_PRINTCR:
+		return old;
+	default:
+		break;
+	}
+	if((node->lhs!=NULL && node->lhs->kind != ND_NONE)
+	|| (node->rhs!=NULL && node->rhs->kind != ND_NONE)){
+//		左辺と右辺をそれぞれoptimizeしたものを新たなノードとする
+//		printf("; optimize new copy node %d\n",++cc);
+		node = new_copy_node(old);
+//		printf("; ");print_nodes(old);printf("\n");
+		if(node->lhs!=NULL){
+			node->lhs = node_opt(old->lhs);
+		}
+		if(node->rhs!=NULL){
+			node->rhs = node_opt(old->rhs);
+		}
+	}
+	if(node->kind==ND_NEG){
+		if(isNUM(node->lhs)){
+			return new_node_num(-(node->lhs->val));
+		}
+	}else if(node->kind==ND_ADD){
+		if(isNUM(node->lhs) && (node->lhs->val==0)){				// 0との加算
+			return node_opt(node->rhs);
+		}
+		if(isNUM(node->rhs) && (node->rhs->val==0)){				// 0との加算
+			return node_opt(node->lhs);
+		}
+		if(isNUM(node->lhs) && isNUM(node->rhs)){					// 定数同士
+			return new_node_num(node->lhs->val + node->rhs->val);
+		}
+		// 左が定数の加算で、右も定数なら計算しておく
+		if((node->lhs->kind==ND_ADD && isNUM(node->lhs->rhs))
+		&& isNUM(node->rhs)){
+//			printf("; ");print_nodes_ln(node);
+//			printf("; folding constant addition +%d+%d\n",node->lhs->rhs->val,node->rhs->val);
+			int	val = node->lhs->rhs->val + node->rhs->val;
+			if(val==0){
+				return node->lhs->lhs;
+			}
+			node = new_copy_node(node->lhs);
+			node->rhs->val = val;
+//			printf("; => ");print_nodes_ln(node);
+			return node;
+		}
+		if((node->lhs->kind==ND_SUB) &&  isVAR(node->lhs->rhs) && isVAR(node->rhs)
+		&& isSameVAR(node->lhs->rhs,node->rhs)){	// 同じ変数を足して引いている
+			printf(";   ");print_nodes_ln(node);
+			printf("; =>");print_nodes_ln(node->lhs->lhs);
+			return node->lhs->lhs;
+		}
+	}else if(node->kind==ND_SUB){
+		if(isNUM(node->lhs) && isNUM(node->rhs)){
+			return new_node_num(node->lhs->val - node->rhs->val);
+		}
+		if(isNUM(node->rhs)){		// 定数減算は負数の加算にする
+			return new_binary(ND_ADD, node->lhs, new_node_num(-(node->rhs->val)));
+		}
+		if(isNUMorVAR(node->lhs) && !isNUMorVAR(node->rhs)){
+			node = new_binary(ND_ADD, node_opt(new_unary(ND_NEG,old->rhs)), old->lhs);
+			return	node;
+		}
+		if((node->lhs->kind==ND_ADD) &&  isVAR(node->lhs->rhs) && isVAR(node->rhs)
+		&& isSameVAR(node->lhs->rhs,node->rhs)){	// 同じ変数を引いて足している
+			printf(";   ");print_nodes_ln(node);
+			printf("; =>");print_nodes_ln(node->lhs->lhs);
+			return node->lhs->lhs;
+		}
+	}else if(node->kind==ND_MUL){
+		if(isNUM(node->lhs) && isNUM(node->rhs)){
+			return new_node_num(node->lhs->val * node->rhs->val);
+		}
+		if(isNUM(node->lhs) && !isNUM(node->rhs)){ // 左が定数で、右がそれ以外なら入れ替える
+			node = new_copy_node(old);
+			node->lhs = old->rhs;
+			node->rhs = old->lhs;
+		}else if(isVAR(node->lhs) && !isNUM(node->rhs)){ // 左辺が変数で、右辺が定数以外
+			node = new_copy_node(old);
+			node->lhs = old->rhs;
+			node->rhs = old->lhs;
+		}
+		// 右辺が定数でなければ最適化できない
+		if(!isNUM(node->rhs)){
+			return node;
+		}
+		switch(node->rhs->val){
+		case -1:	return new_unary(ND_NEG,node->lhs);
+		case 0:		return new_node_num(0);
+		case 1:		return node->lhs;
+		default:	break;
+		}
+		if(node->rhs->val<0){
+			printf("; optimize ND_MUL:");
+			printf(";   ");print_nodes_ln(node);
+			node = new_unary(ND_NEG,new_binary(ND_MUL,node->lhs,new_node_num(abs(node->rhs->val))));
+			printf("; =>");print_nodes_ln(node);
+			return	node;
+		}
+		// 左辺が式の場合は一時領域が必要なので、ここでは最適化できない。残念
+		return	node;
+	}else if(node->kind==ND_DIV){
+		// MODは無視する
+		if(node->lhs->kind==ND_NUM && node->rhs->kind==ND_NUM
+		&& node->rhs->val!=0){
+			return new_node_num(node->lhs->val/node->rhs->val);
+		}
+		if(!isNUM(node->rhs)){
+			return node;
+		}
+		switch(node->rhs->val){
+		case -1:	return new_unary(ND_NEG,node->lhs);
+		case 0:		error("; Divide by 0\n");
+		case 1:		return node->lhs;
+		default:	break;
+		}
+		return node;
+	}else if(node->kind==ND_MOD){
+		if(node->lhs->kind==ND_NUM && node->rhs->kind==ND_NUM
+		&& node->rhs->val!=0){
+			return new_node_num(node->lhs->val%node->rhs->val);
+		}
+		if(!isNUM(node->rhs)){
+			return node;
+		}
+		switch(node->rhs->val){
+		case 1:		return 0;
+		default:	break;
+		}
+		return node;
+	}else if(node->kind==ND_MOD){
+	}
+	return	node;
+}
+
 int	ofl_n = 0;	// optimize for loop
 int	odl_n = 0;	// optimize do  loop
 
