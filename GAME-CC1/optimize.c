@@ -215,8 +215,8 @@ Node	*node_opt(Node	*old)
 		}
 		if((node->lhs->kind==ND_SUB) &&  isVAR(node->lhs->rhs) && isVAR(node->rhs)
 		&& isSameVAR(node->lhs->rhs,node->rhs)){	// 同じ変数を足して引いている
-			printf(";   ");print_nodes_ln(node);
-			printf("; =>");print_nodes_ln(node->lhs->lhs);
+//			printf(";   ");print_nodes_ln(node);
+//			printf("; =>");print_nodes_ln(node->lhs->lhs);
 			return node->lhs->lhs;
 		}
 	}else if(node->kind==ND_SUB){
@@ -232,8 +232,8 @@ Node	*node_opt(Node	*old)
 		}
 		if((node->lhs->kind==ND_ADD) &&  isVAR(node->lhs->rhs) && isVAR(node->rhs)
 		&& isSameVAR(node->lhs->rhs,node->rhs)){	// 同じ変数を引いて足している
-			printf(";   ");print_nodes_ln(node);
-			printf("; =>");print_nodes_ln(node->lhs->lhs);
+//			printf(";   ");print_nodes_ln(node);
+//			printf("; =>");print_nodes_ln(node->lhs->lhs);
 			return node->lhs->lhs;
 		}
 	}else if(node->kind==ND_MUL){
@@ -294,10 +294,10 @@ Node	*node_opt(Node	*old)
 		}
 #endif
 		if(node->rhs->val<0){
-			printf("; optimize ND_MUL:");
-			printf(";   ");print_nodes_ln(node);
+//			printf("; optimize ND_MUL:");
+//			printf(";   ");print_nodes_ln(node);
 			node = new_unary(ND_NEG,new_binary(ND_MUL,node->lhs,new_node_num(abs(node->rhs->val))));
-			printf("; =>");print_nodes_ln(node);
+//			printf("; =>");print_nodes_ln(node);
 			return	node;
 		}
 		// 左辺が式の場合は一時領域が必要なので、ここでは最適化できない。残念
@@ -389,6 +389,7 @@ Node	*node_opt(Node	*old)
 			return opt;
 		}
 	}else if(node->kind==ND_GT && isNUM(node->rhs)){ // (> expr 97) -> (>= expr 98)
+		if(isARRAY1(node->lhs))	return opt;			// ARRAY1なら何もしない
 		//	GT => GE
 		Node *opt = new_copy_node(node);
 		Node *num = new_copy_node(node->rhs);
@@ -399,6 +400,7 @@ Node	*node_opt(Node	*old)
 //		printf("; => ");print_nodes_ln(opt);
 		return node_opt(opt);
 	}else if(node->kind==ND_LE && isNUM(node->rhs)){ // (<= expr 97) -> (< expr 98)
+		if(isARRAY1(node->lhs))	return opt;			// ARRAY1なら何もしない
 		// LE => LTにする
 		Node *opt = new_copy_node(node);
 		Node *num = new_copy_node(node->rhs);
@@ -411,9 +413,7 @@ Node	*node_opt(Node	*old)
 	}else if(isCompare(node)		// 比較演算は右を定数・変数にする
 		&&  ( (isNUM(node->lhs) && !isNUM(node->rhs))
 			||(isVAR(node->lhs) && !isNUMorVAR(node->rhs)))){
-		Node	*opt = new_copy_node(node);
-		opt->lhs = node->rhs;
-		opt->rhs = node->lhs;
+		Node *opt = new_binary(flip_lr(node->kind),node->rhs,node->lhs);
 		return node_opt(opt);
 	}
 	return	node;
@@ -483,8 +483,8 @@ const_opt(Node *old)
 		}
 		if((node->lhs->kind==ND_SUB) &&  isVAR(node->lhs->rhs) && isVAR(node->rhs)
 		&& isSameVAR(node->lhs->rhs,node->rhs)){	// 同じ変数を足して引いている
-			printf(";   ");print_nodes_ln(node);
-			printf("; =>");print_nodes_ln(node->lhs->lhs);
+//			printf(";   ");print_nodes_ln(node);
+//			printf("; =>");print_nodes_ln(node->lhs->lhs);
 			return node->lhs->lhs;
 		}
 	}else if(node->kind==ND_SUB){
@@ -500,8 +500,8 @@ const_opt(Node *old)
 		}
 		if((node->lhs->kind==ND_ADD) &&  isVAR(node->lhs->rhs) && isVAR(node->rhs)
 		&& isSameVAR(node->lhs->rhs,node->rhs)){	// 同じ変数を引いて足している
-			printf(";   ");print_nodes_ln(node);
-			printf("; =>");print_nodes_ln(node->lhs->lhs);
+//			printf(";   ");print_nodes_ln(node);
+//			printf("; =>");print_nodes_ln(node->lhs->lhs);
 			return node->lhs->lhs;
 		}
 	}else if(node->kind==ND_MUL){
@@ -528,10 +528,10 @@ const_opt(Node *old)
 		default:	break;
 		}
 		if(node->rhs->val<0){
-			printf("; optimize ND_MUL:");
-			printf(";   ");print_nodes_ln(node);
+//			printf("; optimize ND_MUL:");
+//			printf(";   ");print_nodes_ln(node);
 			node = new_unary(ND_NEG,new_binary(ND_MUL,node->lhs,new_node_num(abs(node->rhs->val))));
-			printf("; =>");print_nodes_ln(node);
+//			printf("; =>");print_nodes_ln(node);
 			return	node;
 		}
 		// 左辺が式の場合は一時領域が必要なので、ここでは最適化できない。残念
@@ -749,7 +749,7 @@ optimize_for_loop()
 				// (ND_ASSIGN (ND_VAR B) (ND_NUM 1))
 				if((node_n->kind==ND_ASSIGN)			// 制御変数への代入がある
 				&& isVAR(node_n->lhs)
-				&& strcmp(node_n->lhs->str,node_f->str)){
+				&& strcmp(node_n->lhs->str,node_f->str)==0){
 					ofl[n].opt = 0;
 //					printf("; break control var:");print_nodes_ln(node_n);
 					break;
@@ -759,9 +759,9 @@ optimize_for_loop()
 					||(node_n->kind==ND_DECVAR)
 					||(node_n->kind==ND_DEC2VAR)
 					||(node_n->kind==ND_NEGVAR))
-				&& strcmp(node_n->str,node_f->str)){
+				&& strcmp(node_n->str,node_f->str)==0){
 					ofl[n].opt = 0;
-//					printf("; break control var:");print_nodes_ln(node_n);
+//					printf("; break control var %s:",node_n->str);print_nodes_ln(node_n);
 					break;
 				}
 				if(node_n->kind==ND_GOSUB){				// GOSUBがあると制御変数が不確定
@@ -1017,7 +1017,7 @@ optimize_do_loop()
 				// (ND_ASSIGN (ND_VAR B) (ND_NUM 1))
 				if((node_u->kind==ND_ASSIGN)			// 制御変数への代入がある
 				&& isVAR(node_u->lhs)
-				&& strcmp(node_u->lhs->str,odl[n].var)){
+				&& strcmp(node_u->lhs->str,odl[n].var)==0){
 					odl[n].opt = 0;
 //					printf("; break control var:");print_nodes_ln(node_u);
 					break;

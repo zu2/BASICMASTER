@@ -251,6 +251,7 @@ Node *expr();
 void gen_stmt(Node *node);
 void prologue();
 void epilogue();
+NodeKind flip_lr(NodeKind kind);
 
 //
 //	from bmchar.c
