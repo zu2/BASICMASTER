@@ -461,8 +461,11 @@ Token *consume_sep() {
 		return	NULL;
 	}
 	Token	*ret=token;
+	while(token->kind==TK_SEP){
+		ret=token;
+		token = token->next;
+	}
 //	printf("true: token->str='%s'\n",token2str(token));
-	token = token->next;
 	return ret;
 }
 // 次のトークンが数値の場合、トークンを1つ読み進めてその数値を返す。
@@ -1158,8 +1161,10 @@ Node	*assign()
 //			printf("; node2: ");print_nodes_ln(node2);
 			return	node2;
 		}
+		printf("; token:");print_token(token);printf("\n");
 		error("assign error. '=' not found\n; %s\n",current_linetop);
 	}
+	printf("; token:");print_token(token);printf("\n");
 	error("assign error. no token\n; %s\n",current_linetop);
 	return	NULL;
 }
@@ -1375,6 +1380,10 @@ void program()
 		do{
 			if(consume_sep()){
 				continue;
+			}
+			if(token->kind==TK_EOL
+			|| token->kind==TK_EOF){
+				break;
 			}
 			code[i++] = stmt();
 		}while(consume_sep());
