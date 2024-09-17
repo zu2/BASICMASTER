@@ -116,6 +116,26 @@ print_token(Token *token)
 	}
 }
 
+
+//
+//	comparison symbol
+//
+char	*
+compare_symbol_str(NodeKind kind)
+{
+	switch(kind){
+	case ND_EQ: return "==";
+	case ND_NE:	return "!=";
+	case ND_LT:	return "<";
+	case ND_LE:	return "<=";
+	case ND_GT:	return ">";	
+	case ND_GE:	return ">=";
+	default:
+		error("; what? unknown kind %d\n",kind);
+	}
+	return	"";
+}
+
 void	print_nodes(Node *node);
 
 void

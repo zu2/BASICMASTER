@@ -4,6 +4,10 @@ int	isNUM(Node *node)
 {
 	return(node->kind==ND_NUM);
 }
+int	isNUMx(Node *node,int x)
+{
+	return(node->kind==ND_NUM && node->val==x);
+}
 int	isVAR(Node *node)
 {
 	return(node->kind==ND_VAR);
@@ -164,10 +168,10 @@ Node	*node_opt(Node	*old)
 			return new_node_num(-(node->lhs->val));
 		}
 	}else if(node->kind==ND_ADD){
-		if(isNUM(node->lhs) && (node->lhs->val==0)){				// 0との加算
+		if(isNUMx(node->lhs,0)){				// 0との加算
 			return node_opt(node->rhs);
 		}
-		if(isNUM(node->rhs) && (node->rhs->val==0)){				// 0との加算
+		if(isNUMx(node->rhs,0)){				// 0との加算
 			return node_opt(node->lhs);
 		}
 		if(isNUM(node->lhs) && isNUM(node->rhs)){					// 定数同士
@@ -208,7 +212,7 @@ Node	*node_opt(Node	*old)
 			if(val==0){
 				return node->lhs->lhs;
 			}
-			node = new_copy_node(node->lhs);
+			node = new_copy_node(old->lhs);
 			node->rhs->val = val;
 //			printf("; => ");print_nodes_ln(node);
 			return node;
@@ -218,6 +222,10 @@ Node	*node_opt(Node	*old)
 //			printf(";   ");print_nodes_ln(node);
 //			printf("; =>");print_nodes_ln(node->lhs->lhs);
 			return node->lhs->lhs;
+		}
+		if(node->rhs->kind==ND_NEG){				// 負数との加算は素直に減算にする
+			node = new_binary(ND_SUB,old->lhs,old->rhs->lhs);
+			return node_opt(node);
 		}
 	}else if(node->kind==ND_SUB){
 		if(isNUM(node->lhs) && isNUM(node->rhs)){
@@ -235,6 +243,10 @@ Node	*node_opt(Node	*old)
 //			printf(";   ");print_nodes_ln(node);
 //			printf("; =>");print_nodes_ln(node->lhs->lhs);
 			return node->lhs->lhs;
+		}
+		if(node->rhs->kind==ND_NEG){				// 負数との減算は素直に加算にする
+			node = new_binary(ND_ADD,old->lhs,old->rhs->lhs);
+			return node_opt(node);
 		}
 	}else if(node->kind==ND_MUL){
 //		printf("; optimize ND_MUL\n");
@@ -311,6 +323,11 @@ Node	*node_opt(Node	*old)
 			return new_node_num(1);
 		}
 #endif
+	}else if(node->kind==ND_NEG){
+		if(node->lhs->kind==ND_NEG){
+			return node->lhs->lhs;		// 単項マイナスの連続は消す
+		}
+		return	node;
 	}else if(node->kind==ND_ASSIGN){
 //		printf("; ND_ASSIGN optimize :");print_nodes_ln(node);
 		// (ND_ASSIGN (ND_VAR A) (ND VAR A)) -> omit
@@ -390,6 +407,7 @@ Node	*node_opt(Node	*old)
 		}
 	}else if(node->kind==ND_GT && isNUM(node->rhs)){ // (> expr 97) -> (>= expr 98)
 		if(isARRAY1(node->lhs))	return opt;			// ARRAY1なら何もしない
+		if(node->rhs->val==32767)	return opt;		// 32767なら何もしない
 		//	GT => GE
 		Node *opt = new_copy_node(node);
 		Node *num = new_copy_node(node->rhs);
@@ -401,6 +419,7 @@ Node	*node_opt(Node	*old)
 		return node_opt(opt);
 	}else if(node->kind==ND_LE && isNUM(node->rhs)){ // (<= expr 97) -> (< expr 98)
 		if(isARRAY1(node->lhs))	return opt;			// ARRAY1なら何もしない
+		if(node->rhs->val==32767)	return opt;		// 32767なら何もしない
 		// LE => LTにする
 		Node *opt = new_copy_node(node);
 		Node *num = new_copy_node(node->rhs);
@@ -458,11 +477,8 @@ const_opt(Node *old)
 			return new_node_num(-(node->lhs->val));
 		}
 	}else if(node->kind==ND_ADD){
-		if(isNUM(node->lhs) && (node->lhs->val==0)){				// 0との加算
+		if(isNUMx(node->lhs,0)){				// 0との加算
 			return node_opt(node->rhs);
-		}
-		if(isNUM(node->rhs) && (node->rhs->val==0)){				// 0との加算
-			return node_opt(node->lhs);
 		}
 		if(isNUM(node->lhs) && isNUM(node->rhs)){					// 定数同士
 			return new_node_num(node->lhs->val + node->rhs->val);
@@ -694,6 +710,10 @@ optimize_for_loop()
 	for(int i=0; code[i]; i++){		// FOR loop の終わり値を1増やす。< を <= にするため
 		Node *node = code[i];
 		if(node->kind==ND_FOR){
+			if(isNUMx(node->rhs,32767)){
+				printf("; ");print_nodes_ln(node);
+				error("; The final value of FOR is 32767");
+			}
 			Node *new = new_binary(ND_ADD,node->rhs,new_node_num(1));
 //			printf("; FOR node rewrite\n");fflush(stdout);
 //			printf(";   ");print_nodes_ln(node);fflush(stdout);

@@ -87,7 +87,7 @@ typedef enum {
 	ND_DIV,		//	/
 	ND_ABS,		//	+ 絶対値(単項+)
 	ND_NEG,		//	- 単項
-	ND_EQ,		//	=
+	ND_EQ,		//	=	9
 	ND_NE,		//	!=
 	ND_LT,		//	<
 	ND_LE,		//	<= 
@@ -174,6 +174,7 @@ struct Node {
 //
 extern	int		for_count;
 void	print_token(Token *token);
+char	*compare_symbol_str(NodeKind kind);
 void	print_nodes(Node *node);
 void	print_nodes_ln(Node *node);
 void	error(char *fmt, ...);
@@ -200,6 +201,7 @@ int usedLINENO(int v);
 // from optimize.c
 //
 int		isNUM(Node *node);
+int		isNUMx(Node *node,int x);
 int		isVAR(Node *node);
 int		isNUMorVAR(Node *node);
 int		isCompare(Node *node);
