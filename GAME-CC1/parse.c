@@ -166,7 +166,7 @@ print_array_node(char *name,Node *node){
 }
 void
 print_setvar_node(char *name,Node *node){
-	printf("(%s str=%s ",name,node->str);
+	printf("(%s %s ",name,node->str);
 	print_nodes(node->lhs);
 	printf(")");
 }
@@ -305,7 +305,7 @@ print_nodes(Node *node)
 	case ND_DEC2VAR:	print_var_node("ND_DEC2VAR",node);break;
 	case ND_ASM:		printf("(ND_ASM str=\"%s\")",str);break;
 	case ND_IFGOTO:		printf("(ND_IFGOTO val=%d ",val);print_nodes(lhs);printf(")");break;
-	case ND_STACKTOP:	printf("(ND_STACKTOP val=%d ",val);print_nodes(lhs);printf(")");break;
+//	case ND_STACKTOP:	printf("(ND_STACKTOP val=%d ",val);print_nodes(lhs);printf(")");break;
 	case ND_RELMUL:		print_binary_node("ND_RELMUL",node);break;	//	関係演算同士の*
 	case ND_RELADD:		print_binary_node("ND_RELADD",node);break;	//	関係演算同士の+
 	case ND_UPDATEDO:	printf("(ND_UPDATEDO val=%d)",val);break;	// DO-UNTILの制御変数の更新

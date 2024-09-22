@@ -152,7 +152,7 @@ typedef enum {
 	ND_DEC2VAR,
 	ND_ASM,
 	ND_IFGOTO,
-	ND_STACKTOP,
+//	ND_STACKTOP,
 	ND_RELMUL,	//	関係演算同士の*
 	ND_RELADD,	//	関係演算同士の+
 	ND_UPDATEDO,	// DO-UNTILの制御変数の更新場所

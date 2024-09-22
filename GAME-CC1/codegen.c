@@ -1299,14 +1299,14 @@ void	LDD_L(char *str)
 		printf("\tLDAA\t%s\n", str);
 		lv_free_reg_ABD();
 }
-void	LDD_IVX(Node *node)		// SUB # or Var or n,X
+void	LDD_IVX(Node *node,int offset)		// SUB # or Var or n,X
 {
 		if(isNUM(node)){
 			LDD_I(node->val);
 		}else if(isVAR(node)){
 			LDD_V(node->str);
-		}else if(node->kind==ND_STACKTOP){
-			LDD_X(node->val);
+		}else if(isARRAY2(node)){
+			LDD_X(offset);
 		}else{
 			printf("; LDD_IVX:");print_nodes_ln(node);
 			error("; LDD_IVX ");
@@ -1965,17 +1965,43 @@ void	JMP(char *to)
 {
 		printf("\tJMP\t%s\n",to);
 }
+
+typedef	struct {
+		char	*name;
+		int		used;
+} gamecc_lib_t;
+
+gamecc_lib_t	gamecc_lib[] = {
+		{ "MOD7",0 },
+		{ "MOD15",0 },
+		{ "MOD5",0 },
+		{ "MOD10",0 },
+		{ "MULTIPLY",0 },
+		{ "MULTIPLYX",0 },
+		{ "DIVPOW2",0 },
+		{ "RDIVIDE",0 },
+		{ "RDIVIDEX",0 },
+		{ "DIVIDEX",0 },
+		{ "DIVIDE",0 },
+		{ "DIVS10",0 },
+		{ "DIVU10",0 },
+		{ "RANDOM",0 },
+		{ "PRHEX4",0 },
+		{ "PRHEX2",0 },
+		{ "PRINTTAB",0 },
+		{ "PRINTL",0 },
+		{ "PRINTSTR",0 },
+		{ "PRINTCR",0 },
+		{ "INPUT",0 },
+		{ "INIT_MUSIC",0 },
+		{ "KBIN_SUB",0 },
+};
 void	JSR(char *to)
 {
-		char	*keepTMP[] = {
-				"DIVIDE","DIVPOW2","RANDOM",
-				"MULTIPLY","PRHEX4","PRHEX2","PRINTTAB",
-				"PRINTL","PRINTR","PRINTCR","PRINTCR","INPUT","KBIN_SUB",
-				"PRINTSTR","ASCIN","CURPOS","MUSIC"
-		};
 		printf("\tJSR\t%s\n",to);
-		for (int i=0; i<(int)(sizeof(keepTMP)/sizeof(*keepTMP)); i++){
-			if(strcmp(to,keepTMP[i])==0){
+		for (int i=0; i<(int)(sizeof(gamecc_lib)/sizeof(*gamecc_lib)); i++){
+			if(strcmp(to,gamecc_lib[i].name)==0){
+				gamecc_lib[i].used++;
 				lv_free_reg_ABDX();
 				return;
 			}
@@ -2645,8 +2671,7 @@ gen_skip_if_false(Node *node,char *if_false)
 		char *label = new_label();
 		ABA();
 		BNE(label);
-		BCS(label);
-		BRA(if_false);
+		BCC(if_false);
 		LABEL(label);
 		return;
 	}
@@ -3287,6 +3312,22 @@ gen_expr(Node *node)
 							CLRD();
 							CLR_V("MOD");
 							return;
+				case 5:	gen_expr(lhs->lhs);
+						JSR("MOD5");
+						STD_V("MOD");
+						return;
+				case 7:	gen_expr(lhs->lhs);
+						JSR("MOD7");
+						STD_V("MOD");
+						return;
+				case 10:gen_expr(lhs->lhs);
+						JSR("MOD10");
+						STD_V("MOD");
+						return;
+				case 15:gen_expr(lhs->lhs);
+						JSR("MOD15");
+						STD_V("MOD");
+						return;
 				default: break;
 				}
 			}
@@ -3375,7 +3416,7 @@ gen_expr(Node *node)
 				char *label2 = new_label();
 				if(isNUMorVAR(node->rhs)){	// 右項は数値か単純変数
 					gen_skip_if_false(node->lhs,label);
-					LDD_IVX(node->rhs);
+					LDD_IVX(node->rhs,0);
 					SKIP2();
 					LABEL(label);
 					CLRD_noopt();
@@ -3622,44 +3663,22 @@ gen_expr(Node *node)
 			}
 			break;
 	case ND_RELMUL: {  //  関係演算同士の*
+				// TODO: ショートカットすると最適化がバグる。何か考える
 				Node *lhs = node->lhs;
 				Node *rhs = node->rhs;
-#if	0
-				if(!has_side_effect(rhs)){	// 右項に副作用がなければショートカット
-					char *if_false = new_label();
-					gen_skip_if_false(lhs,if_false);
-					gen_skip_if_false(rhs,if_false);
-					LDAB_I(1);
-					SKIP1();
-					LABEL(if_false);
-					CLRB();
-					CLRA();
-				}else if(!has_side_effect(lhs)){	// 左項に副作用がなければショートカット
-					char *if_false = new_label();
-					gen_skip_if_false(rhs,if_false);	// 右から処理する
-					gen_skip_if_false(lhs,if_false);
-					LDAB_I(1);
-					SKIP1();
-					LABEL(if_false);
-					CLRB();
-					CLRA();
-				}else{
-#else
-				{
-#endif
-					char *if_false = new_label();
-					gen_compare8(lhs);
-					char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
-					STAB_V1(tmp);
-					gen_compare8(rhs);
-					ANDB_V1(tmp);
-					lv_free_reg(tmp);
-					CLRA();
-				}
+				char *if_false = new_label();
+				gen_compare8(lhs);
+				char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
+				STAB_V1(tmp);
+				gen_compare8(rhs);
+				ANDB_V1(tmp);
+				lv_free_reg(tmp);
+				CLRA();
 				return;
 			}
 			break;
 	case ND_RELADD: { //  関係演算同士の+ は普通の加算で良い
+				// ADDは加算結果を使うことがあるので、ショートカットできない
 				printf("; gen_expr ND_RELADD:");print_nodes_ln(node);
 				gen_compare8(node->lhs);
 				char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
@@ -3699,7 +3718,7 @@ gen_stmt(Node *node)
 		// IF/GOTO/GOSUBの飛び先として使われていない行番号はラベルにしない
 		if(usedLINENO(node->val)){
 			LABEL(new_line_label(node->val));
-			lv_free_all();	// レジスタ割り当て全てクリア
+			lv_free_all();	// ラベルに飛んでくる可能性があるので、レジスタ割り当て全てクリア
 		}else{
 			lv_free_used();	// 一時利用領域クリア
 		}
@@ -3732,8 +3751,10 @@ gen_stmt(Node *node)
 					return;
 				}else if(isNUMorVAR(rhs)){
 //					printf("; debug ND_ASSIGN ARRAY1=NUMorVAR");print_nodes_ln(node);
-					int	offset = gen_array_address(lhs,"");	// X=adrs, offset=subscript
+					int offset;
+					char *tmp = gen_array_laddress(lhs,"",&offset);
 					LDAB_IVX(rhs,0);
+					LDX_V(tmp);
 					STAB_X0(offset);
 					return;
 				}else if(isARRAY1(rhs) && is_simple_array(rhs)){
@@ -3746,33 +3767,12 @@ gen_stmt(Node *node)
 					STAB_X0(off1);
 					return;
 				}
-#if	0
-				if(!has_side_effect(lhs)){
-//					printf("; ND_ASSIGN lhs no side effect");print_nodes_ln(lhs);
-					gen_expr(rhs);
-					int offset = gen_array_address(lhs,"B");
-					STAB_X0(offset);
-					return;
-				}
-#endif
-#if	1
 				int	offset;
-				char *tmp;
-				tmp = gen_array_laddress(lhs,"",&offset);
+				char *tmp = gen_array_laddress(lhs,"",&offset);
 				gen_expr(rhs);
 				LDX_V(tmp);
 				STAB_X0(offset);
 				return;
-#else
-				gen_expr(lhs->lhs);						// calculate subscript
-				ADD_V(lhs->str);						// 左辺のアドレスはDにある
-				char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
-				STD_V(tmp);
-				gen_expr(rhs);
-				LDX_V(tmp);
-				STAB_X0(0);
-				lv_free_reg(tmp);
-#endif
 				return;
 			}else if(isARRAY2(lhs)){
 				//  (ND_ASSIGN (ND_ARRAY2 str=N (ND_VAR str=I)) (ND_NUM 0))
@@ -3799,22 +3799,24 @@ gen_stmt(Node *node)
 						STAB_X0(offset);
 					}
 					return;
+#if	0
 				}else if(isNUMorVAR(rhs)){
 					int offset;
 					char *tmp = gen_array_laddress(lhs,"",&offset);	// X=adrs, offset=subscript
-					LDD_IVX(rhs);
+					LDD_IVX(rhs,0);
 					LDX_V(tmp);
 					STD_X(offset);
 					return;
 				}else if(isARRAY2(rhs) && is_simple_array(rhs)){
 					int	off1,off2;
-					char *tmp2 = gen_array_laddress(rhs,"",&off2);
 					char *tmp1 = gen_array_laddress(lhs,"",&off1);
+					char *tmp2 = gen_array_laddress(rhs,"",&off2);
 					LDX_V(tmp2);
 					LDD_X(off2);
 					LDX_V(tmp1);
 					STD_X(off1);
 					return;
+#endif
 				}
 				int  offset;
 				char *tmp = gen_array_laddress(lhs,"",&offset);
@@ -4403,7 +4405,6 @@ epilogue()
 	printf("\tLDS\t_RETSP\n");
 	printf("\tRTS\n");
 	RMB("_RETSP",2);
-	RMB("_CPXWK",2);
 	printf("VAR\tEQU\t*\n");
 	RMB("_A",2);
 	RMB("_B",2);
@@ -4468,7 +4469,17 @@ epilogue()
 		printf("%s",STRING_FCC[i].str);
 		printf("\tFCB\t0\n");
 	}
+	for (int i=0; i<(int)(sizeof(gamecc_lib)/sizeof(*gamecc_lib)); i++){
+#if		1
+		printf("IF_%s\tEQU\t%d\n",gamecc_lib[i].name,gamecc_lib[i].used);
+#else
+		if(gamecc_lib[i].used){
+			printf("IF_%s\tEQU\t1\n",gamecc_lib[i].name);
+		}
+#endif
+	}
 	printf("\tINCLUDE\tgamecc.asm\n");
+//	printf("\tINCLUDE\tmul32.asm\n");
 	printf("_LPGEND\tEQU\t*\n");
 	printf("\tEND\tmain\n");
 	printf("* vim" ":set" " ts=8:\n");
