@@ -636,6 +636,12 @@ uint16_t	make_word(int a,int b)
 	return	word((low(a)<<8) + low(b));
 }
 
+void
+RTS()
+{
+	printf("\tRTS\n");
+}
+
 //
 //	reg "A" なら "B" を "B" なら "A" を返す
 //
@@ -2711,6 +2717,7 @@ gen_skip_if_false(Node *node,char *if_false)
 		}
 		BNEEQ(kind==ND_EQ,if_false);
 		return;
+#if	EMU_CPU_BUGS
 	}else if(isVAR(lhs) && isNUM(rhs) && (rhs->val==0) && (kind==ND_LE||kind==ND_GT)){
 //		  && lv_search_reg_var("X",lhs->str)){			// VAR<=0, VAR>0 かつ VarがIXにある
 		// Var<=0		Var>0
@@ -2726,6 +2733,7 @@ gen_skip_if_false(Node *node,char *if_false)
 		BNEEQ(kind==ND_LE,if_false);
 		BPLMI(kind==ND_LE,if_false);
 		return;
+#endif
 	}else if(isARRAY1(lhs) && isNUM(rhs) && isEQorNE(node)
 			&& rhs->val>=0 && rhs->val<=255){	// 間接1バイトとの ==,!=
 //		printf("; gen_skip_if_false ARRAY1 ==/!= 0-255\n");
@@ -2936,7 +2944,7 @@ gen_skip_if_true(Node *node,char *if_true)
 		if(isVAR(lhs)){
 			if(lv_search_reg_var("D",lhs->str)){
 				TSTA();
-#ifdef	EMU_CPU_BUGS
+#if	EMU_CPU_BUGS
 			}else if(lv_search_reg_var("X",lhs->str)){
 				CPX_I(0);
 #endif
@@ -2969,6 +2977,7 @@ gen_skip_if_true(Node *node,char *if_true)
 		}
 		BEQNE(kind==ND_EQ,if_true);
 		return;
+#if	EMU_CPU_BUGS
 	}else if(isVAR(lhs) && isNUM(rhs) && (rhs->val==0) && (kind==ND_LE||kind==ND_GT)){
 //		  && lv_search_reg_var("X",lhs->str)){			// VAR<=0, VAR>0 かつ VarがIXにある
 		// Var<=0	;	Var>0
@@ -2991,6 +3000,7 @@ gen_skip_if_true(Node *node,char *if_true)
 			LABEL(if_false);
 		}
 		return;
+#endif
 	}else if(isARRAY1(lhs) && isNUM(rhs) && isEQorNE(node)
 			&& rhs->val>=0 && rhs->val<=255){	// 間接1バイトとの ==,!=
 //		printf("; gen_skip_if_true ARRAY1 ==/!= 0-255\n");
@@ -3885,8 +3895,15 @@ gen_stmt(Node *node)
 			LABEL(if_false);
 		}
 		return;
+	case ND_IFRETURN: {
+			char *if_false	= new_label();
+			gen_skip_if_false(node->lhs,if_false);
+			RTS();
+			LABEL(if_false);
+		}
+		return;
 	case ND_RETURN:
-		printf("\tRTS\n");
+		RTS();
 		lv_free_all();	// レジスタ割り当て全てクリア
 		return;
 	case ND_GOTO:

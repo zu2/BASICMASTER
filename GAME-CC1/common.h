@@ -13,6 +13,7 @@
 //
 //	一部のエミュレーターでは動作に非互換がある
 //			CPX のフラグの扱い
+//			バグありのCPUなら0にする
 //
 #define		EMU_CPU_BUGS	(1)
 
@@ -154,6 +155,7 @@ typedef enum {
 	ND_DEC2VAR,
 	ND_ASM,
 	ND_IFGOTO,
+	ND_IFRETURN,
 //	ND_STACKTOP,
 	ND_RELMUL,	//	関係演算同士の*
 	ND_RELADD,	//	関係演算同士の+

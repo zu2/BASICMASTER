@@ -40,6 +40,143 @@ CURPOS		EQU     $FFF5
 *
 LINBUF		EQU		$0500
 LBUFSIZ		EQU		6+1			; 数値入力しかしないので '-'と5桁まで。末尾に00
+;
+;	MOD(%)演算をシフトに置き換える
+;	AB = AB%const
+;
+;	cf. https://camidion.wordpress.com/2012/11/10/speedy_modulo/
+		IF		IF_MOD7
+MOD7	TSTA				; 2 1
+		BPL		MOD7L0		; 4 2
+		NEGA				; 2 1
+		NEGB				; 2 1
+		SBCA	#0			; 2 2
+MOD7L0	BNE		MOD7L1		; 4 2
+		BITB	#$F8		; 2 2
+		BEQ		MOD7L3		; 4 2
+MOD7L1	STAB	W66+1		; 4 2	save Breg
+		ANDB	#7			; 2 2
+		STAB	W66			; 4 2	W66=num&7
+		LDAB	W66+1		; 3 2
+		LSRA				; 2 1
+		RORB				; 2 1
+		LSRA				; 2 1
+		RORB				; 2 1
+		LSRA				; 2 1
+		RORB				; 2 1	AB>>3
+		ADDB	W66			; 4 2
+		ADCA	#0			; 2 2
+MOD7L2	BNE		MOD7L1		; 4 2
+		BITB	#$F8		; 2 2
+		BNE		MOD7L1		; 4 2
+MOD7L3	CMPB	#7			; 2 2
+		BCS		MOD7E		; 4 2
+		SUBB	#7			; 2 2
+MOD7E	CLRA
+		RTS					; 5 1
+		ENDIF
+;
+;
+;
+		IF		IF_MOD15
+MOD15	TSTA				; 2 1
+		BPL		MOD15L0		; 4 2
+		NEGA				; 2 1
+		NEGB				; 2 1
+		SBCA	#0			; 2 2
+MOD15L0	BNE		MOD15L1		; 4 2
+		BITB	#$F0		; 2 2
+		BEQ		MOD15L3		; 4 2
+MOD15L1	STAB	W66+1		; 4 2	save Breg
+		ANDB	#15			; 2 2
+		STAB	W66			; 4 2	W66=num&15
+		LDAB	W66+1		; 3 2
+		LSRA				; 2 1
+		RORB				; 2 1
+		LSRA				; 2 1
+		RORB				; 2 1
+		LSRA				; 2 1
+		RORB				; 2 1
+		LSRA				; 2 1
+		RORB				; 2 1	AB>>4
+		ADDB	W66			; 4 2
+		ADCA	#0			; 2 2
+MOD15L2	BNE		MOD15L1		; 4 2
+		BITB	#$F0		; 2 2
+		BNE		MOD15L1		; 4 2
+MOD15L3	CMPB	#15			; 2 2
+		BCS		MOD15E		; 4 2
+		SUBB	#15			; 2 2
+MOD15E	CLRA
+		RTS					; 5 1
+		ENDIF
+;
+;	cf. https://stackoverflow.com/questions/76197520/is-it-possible-to-make-x10-modulus-10-with-bitwise-operators-in-c
+;
+;    n = (n>>8) + (n & 0xff);
+;    n = (n>>4) + (n & 0x0f);
+;    n = (n>>4) + (n & 0x0f);
+;    if (n >= 10) n -= 10;
+;    if (n >= 5) n -= 5;
+;
+		IF		IF_MOD5+IF_MOD10
+MOD5	TSTA				; 2 1
+		BPL		MOD5L0		; 4 2
+		NEGA				; 2 1
+		NEGB				; 2 1
+		SBCA	#0			; 2 2
+MOD5L0	STAA	W66+1		; 4 2 W66=high(n)
+		CLRA				; 2 1
+		ADDB	W66+1		; 3 2 
+		ADCA	#0			; 2 2 n=(n>>8)+(n&0xff)
+		STAB	W66			; 3 2 save low byte
+		LSRA				; 2 1 AccA is at most 1, so you only need one shift.
+		RORB				; 2 1
+		LSRB				; 2 1
+		LSRB				; 2 1
+		LSRB				; 2 1
+		LDAA	W66			; 3 2 Since n<=255 ,so AccA is not used, calculate n&0x0f
+		ANDA	#$0F		; 2 2
+		ABA					; 2 1 n = (n>>4) + (n & 0x0f);
+		TAB					; 2 1
+		ANDA	#$0F		; 2 2
+		LSRB				; 2 1
+		LSRB				; 2 1
+		LSRB				; 2 1
+		LSRB				; 2 1
+		ABA					; 2 1 n = (n>>4) + (n & 0x0f);
+MOD5L1	TAB					; 2 1
+		SUBB	#10			; 2 2
+		BCC		MOD5L2		; 4 2
+		TAB					; 2 1
+MOD5L2	TBA					; 2 1
+		SUBB	#5			; 2 2
+		BCC		MOD5L3		; 4 2
+		TAB					; 2 1
+MOD5L3	CLRA				; 2 1
+		RTS					; 5 1
+		ENDIF
+;
+;    return (mod5(n>>1)<<1) | (n&1);
+;
+		IF		IF_MOD10
+MOD10	TSTA				; 2 1
+		BPL		MOD10L0		; 4 2
+		NEGA				; 2 1
+		NEGB				; 2 1
+		SBCA	#0			; 2 2
+MOD10L0	STAB	W68			; 4 2	
+		LSRA				; 2 1
+		RORB				; 2 1
+		BSR		MOD5L0		; 8 2
+		ROR		W68			; 6 3
+		ROLB				; 2 1
+MOD10E	RTS					; 5 1
+		ENDIF
+;
+;	TODO: other mod xx pattern.
+;		cf. https://homepage.cs.uiowa.edu/~jones/bcd/mod.shtml	MOD 3,6,7
+;
 *
 *	MULTIPLY Dr Jefyll's method
 *			cf. http://forum.6502.org/viewtopic.php?p=19958#p19958
@@ -54,15 +191,15 @@ MULTIPLYX	STX		W66				;	4 2
 			BEQ		MULTI02			;   4 2
 			CLRA					;   2 1
 			LDX		#8              ;   3 3
-ML01	    ROR		W68+1			;   6 3
-			BCC		ML02			;	4 2
+		    ROR		W68+1			;   6 3
+ML01		BCC		ML02			;	4 2
 			ADDB	W66+1			;   3 2
 			ADCA	W66             ;   3 2
 ML02		LSRA					;   2 1
 			RORB					;   2 1
+			ROR		W68+1			;	6 3
 			DEX						;	4 1
 			BNE     ML01            ;   4 2			28cycle/loop => *8=>224cycle
-			ROR		W68+1			;	6 3
 ML03		TST		W68				;	6 3
 			BNE		ML031			;	4 2			Is W68,W68+1 <= 255?
 			TBA						;	2 1
@@ -285,6 +422,7 @@ DIVMNS02	ASL		W68+1		; 6 3
 *	cf. https://hackaday.com/2020/06/12/binary-math-tricks-shifting-to-divide-by-ten-aint-easy/
 *	cf. http://homepage.divms.uiowa.edu/~jones/bcd/divide.html
 *
+			IF		IF_DIVS10
 DIVS10		STAA	W66			; 4 2
 			BPL		DIVU100		; 4 2
 			NEGA				; 2 1
@@ -295,6 +433,8 @@ DIVS10		STAA	W66			; 4 2
 			NEGB				; 2 1
 			SBCA	#0			; 3 2
 			RTS					; 5 1
+			ENDIF
+			IF		IF_DIVU10+IF_DIVS10
 DIVU10		STAA	W66			; 4 2
 DIVU100		STAB	W66+1		; 4 2	save dividend n
 			LSRA				; 2 1
@@ -358,10 +498,12 @@ DIVU100		STAB	W66+1		; 4 2	save dividend n
 DIVU101		LDAB	W68+1		; 3 2
 			LDAA	W68			; 3 2
 			RTS					; 5 1	↑152
+			ENDIF
 *
 *	RANDOM 1 between AB
 *			cf.https://tinyework.flston.com/xorshift-on-hd6301
 *
+			IF		IF_RANDOM
 RANDOM		STAB	W6A+1
 			STAA	W6A
 			LDAB	RND
@@ -376,15 +518,16 @@ RANDOM		STAB	W6A+1
 			TBA
 			EORA	RND
 			STAA	RND
-			LDX		#W6A
+			LDX		W6A
 			TAB
 			CLRA
-			JSR		MULTIPLY
+			JSR		MULTIPLYX
 			TAB
 			CLRA
 			ADDB	#1
 			ADCA	#0
 			RTS
+			ENDIF
 *
 * PRINT HEX sub. AccAB is destroyed
 *
@@ -466,34 +609,30 @@ PRE			RTS
 *	AccAB to Decimal W82+1..W82+5
 *			return IX, it contains the first non-zero position (for zero blanking)
 *
-BYNDEC		EQU		*
-			LDX		#W82+1			; 10進文字保存領域。W82+1〜W82+5
-			STX		W6C
-BYND10000	LDX		#CTABLE
-BYNDEC0		STX		W6E
-			CLR		W68				; 商=0
-BYNDEC2		INC		W68				; 商を+1
-			SUBB	1,X
-			SBCA	0,X
-			BCC		BYNDEC2
-			ADDB	1,X				; 引きすぎた
-			ADCA	0,X
-			PSHB
-			LDAB	W68				; 商を文字に変換
-			ADDB	#'0'-1			; 商は本来の値よりも1つ多くなっているので、-1する
-			STX		W6E
-			LDX		W6C
-			STAB	0,X
-			INX
-			STX		W6C
-			PULB
-			LDX		W6E
-			INX
-			INX
-			CPX		#CTABLEE
-			BNE		BYNDEC0
-			ADDB	#'0'			; 余り(AccAB)が最後の1桁になっている
-			COMB					; ゼロブランキングのフラグとして使うので反転
+*	cf. https://homepage.cs.uiowa.edu/~jones/bcd/decimal.html
+*
+BYNDEC		LDX		#$2F3A			; #'0'-1,#'9'+1
+			STX		W82+1
+			STX		W82+3
+BYNDEC1		INC		W82+1			; 6 3
+			SUBB	#10000%256		; 2 2
+			SBCA	#10000/256		; 2 2
+			BCC		BYNDEC1			; 4 2		14cycle/loop
+BYNDEC2		DEC		W82+2			; 6 3
+			ADDB	#1000%256		; 2 2
+			ADCA	#1000/256		; 2 2
+			BCC		BYNDEC2			; 4 2		14cycle/loop
+BYNDEC3		INC		W82+3			; 6 3
+			SUBB	#100			; 2 2
+			SBCA	#0				; 2 2
+			BCC		BYNDEC3			; 4 2		14cycle/loop
+			LDAA	#$3A			; 2 2
+BYNDEC4		DECA					; 2 1
+			ADDB	#10				; 2 2
+			BCC		BYNDEC4			; 4 2		8cycle/loop + 2 + 4
+			STAA	W82+4			; 4 2
+			ADDB	#'0'
+			COMB
 			STAB	W82+5
 ZEROBLK		LDX		#W82			; 変換終了。ゼロブランキングする
 ZB1			INX						; Zero blanking
@@ -502,12 +641,7 @@ ZB1			INX						; Zero blanking
 			BEQ		ZB1
 			COM		W82+5
 ZB2			RTS
-CTABLE		FDB     10000			; $2710
-			FDB     1000			; $03E8
-			FDB     100				; $0064
-			FDB     10
-;			FDB		1
-CTABLEE		EQU		*
+			ENDIF
 *
 BEL			EQU		$07
 BS			EQU		$08
@@ -629,8 +763,10 @@ W64			RMB		2			; PRINTR WORK
 ;W68		RMB		2
 W66			EQU		$005D
 W68			EQU		$006F
-W6A			RMB		2			; RANDOM WORK
-W6C			RMB		2			; BYNDEC WORK
+;W6A		RMB		2			; RANDOM WORK
+W6A			EQU		$00AD
+;W6C			RMB		2			; BYNDEC WORK
+W6C			EQU		$00AF			; BYNDEC WORK
 W6E			RMB		2			; BYNDEC WORK
 W82			RMB		6			; DIVIDE BINDEC/WORK
 			FCB		0

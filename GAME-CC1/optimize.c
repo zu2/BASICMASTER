@@ -261,7 +261,7 @@ Node	*node_opt(Node	*old)
 			node = new_copy_node(old);
 			node->lhs = old->rhs;
 			node->rhs = old->lhs;
-		}else if(isVAR(node->lhs) && !isNUM(node->rhs)){ // 左辺が変数で、右辺が定数以外
+		}else if(isVAR(node->lhs) && !isNUMorVAR(node->rhs)){ // 左辺が変数で、右辺が定数・変数以外
 			node = new_copy_node(old);
 			node->lhs = old->rhs;
 			node->rhs = old->lhs;

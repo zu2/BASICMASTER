@@ -316,6 +316,7 @@ print_nodes(Node *node)
 	case ND_DEC2VAR:	print_var_node("ND_DEC2VAR",node);break;
 	case ND_ASM:		printf("(ND_ASM str=\"%s\")",str);break;
 	case ND_IFGOTO:		printf("(ND_IFGOTO val=%d ",val);print_nodes(lhs);printf(")");break;
+	case ND_IFRETURN:	printf("(ND_IFRETURN ");print_nodes(lhs);printf(")");break;
 //	case ND_STACKTOP:	printf("(ND_STACKTOP val=%d ",val);print_nodes(lhs);printf(")");break;
 	case ND_RELMUL:		print_binary_node("ND_RELMUL",node);break;	//	関係演算同士の*
 	case ND_RELADD:		print_binary_node("ND_RELADD",node);break;	//	関係演算同士の+
@@ -1256,6 +1257,14 @@ Node	*stmt()
 					if(lineno>0 && (existLINENO(lineno)==NULL)){
 						error("; IFGOTO undefined linenumber %d\n",lineno);
 					}
+					return node;
+				}
+				if(token->kind==TK_SEP && token->next->kind==TK_RETURN){
+//					printf("; IF RETURN fusion   ");print_nodes_ln(node);
+					int lineno=token->next->next->val;
+					node->kind = ND_IFRETURN;
+					token=token->next->next;
+//					printf("; => IF RETURN fusion");print_nodes_ln(node);
 					return node;
 				}
 			}
