@@ -190,7 +190,7 @@ Node	*node_opt(Node	*old)
 			node->rhs = old->lhs;
 			return	node;
 		}
-		if(isVAR(node->lhs) && !isNUM(node->rhs)){	// 左が変数で右が定数以外
+		if(isVAR(node->lhs) && !isNUMorVAR(node->rhs)){	// 左が変数で右が定数・変数以外
 			node = new_copy_node(old);
 			node->lhs = old->rhs;
 			node->rhs = old->lhs;
@@ -408,6 +408,7 @@ Node	*node_opt(Node	*old)
 	}else if(node->kind==ND_GT && isNUM(node->rhs)){ // (> expr 97) -> (>= expr 98)
 		if(isARRAY1(node->lhs))	return opt;			// ARRAY1なら何もしない
 		if(node->rhs->val==32767)	return opt;		// 32767なら何もしない
+		if(isVAR(node->lhs) && (node->rhs->val==0))	return opt;		// VAR>0なら何もしない
 		//	GT => GE
 		Node *opt = new_copy_node(node);
 		Node *num = new_copy_node(node->rhs);
@@ -420,6 +421,8 @@ Node	*node_opt(Node	*old)
 	}else if(node->kind==ND_LE && isNUM(node->rhs)){ // (<= expr 97) -> (< expr 98)
 		if(isARRAY1(node->lhs))	return opt;			// ARRAY1なら何もしない
 		if(node->rhs->val==32767)	return opt;		// 32767なら何もしない
+		if(isVAR(node->lhs) && (node->rhs->val==0))	return opt;		// VAR<=0なら何もしない
+		//	GT => GE
 		// LE => LTにする
 		Node *opt = new_copy_node(node);
 		Node *num = new_copy_node(node->rhs);

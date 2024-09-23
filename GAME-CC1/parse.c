@@ -210,6 +210,15 @@ print_cell_node(Node *node)
 	}
 	printf(")");
 }
+//
+//	ON GOTO/GOSUB
+//		lhs = term
+//		rhs = cellist (line number)
+//
+void
+print_on_node(char *name,Node *node)
+{
+}
 
 void
 print_nodes(Node *node)
@@ -246,6 +255,8 @@ print_nodes(Node *node)
 	case ND_GOTO:		printf("(ND_GOTO %d)",val);break;
 	case ND_GOSUB:		printf("(ND_GOSUB %d)",val);break;
 	case ND_RETURN:		printf("ND_RETURN ");break;
+	case ND_ONGOTO:		print_on_node("ND_ONGOTO",node);break;
+	case ND_ONGOSUB:	print_on_node("ND_ONGOSUB",node);break;
 	case ND_LINENUM:	printf("(ND_LINENUM %d '%s')",val,str);break;
 	case ND_SETRAM:		print_unary_node("ND_SETRAM",node);break;
 	case ND_PRINT:		print_unary_node("ND_PRINT",node);break;

@@ -102,6 +102,8 @@ typedef enum {
 	ND_GOTO,	//	u=
 	ND_GOSUB,	//	!=
 	ND_RETURN,	//	]
+	ND_ONGOTO,	//	#term=linenum,linenum..
+	ND_ONGOSUB,	//	!term=linenum,linenum..
 	ND_LINENUM,	//
 	ND_SETRAM,
 	ND_PRINT,

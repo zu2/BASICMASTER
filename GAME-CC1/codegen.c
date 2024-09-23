@@ -1838,11 +1838,6 @@ void	LDX_X(int v)
 void	LDX_V_I(char *str)
 {
 //		printf("; LDX_V search var %s\n",str);fflush(stdout);
-		if(lv_search_reg_var("X",str)){
-//			printf("; LDX var %s optimized\n",str);
-//			do nothing
-			return;
-		}
 		printf("\tLDX\t#_%s\n",str);
 		lv_free_reg_X();
 }
@@ -2706,11 +2701,30 @@ gen_skip_if_false(Node *node,char *if_false)
 		BPLMI(kind==ND_LT,if_false);
 		return;
 	}else if(isNUMorVAR(lhs) && isNUMorVAR(rhs) && isEQorNE(node)){	// ==,!= はCPXで
-		LDX_IVX(lhs,0);
-		if(!isNUMx(rhs,0)){	// CPX #0 は生成しない
+        if(isVAR(lhs) && lv_search_reg_var("X",lhs->str)){	// 既にXにVarがあるときはCPXだけ生成
 			CPX_IV(rhs);
+		}else{
+			LDX_IVX(lhs,0);
+			if(!isNUMx(rhs,0)){	// LDX直後のCPX #0 は生成しない
+				CPX_IV(rhs);
+			}
 		}
 		BNEEQ(kind==ND_EQ,if_false);
+		return;
+	}else if(isVAR(lhs) && isNUM(rhs) && (rhs->val==0) && (kind==ND_LE||kind==ND_GT)){
+//		  && lv_search_reg_var("X",lhs->str)){			// VAR<=0, VAR>0 かつ VarがIXにある
+		// Var<=0		Var>0
+		// CPX	#0	;	CPX #0
+		// BNE	F	;	BEQ	F
+		// BPL	F	;	BMI F
+		// T		;	T
+		if(!lv_search_reg_var("X",lhs->str)){
+			LDX_V(lhs->str);
+		}else{
+			CPX_I(0);
+		}
+		BNEEQ(kind==ND_LE,if_false);
+		BPLMI(kind==ND_LE,if_false);
 		return;
 	}else if(isARRAY1(lhs) && isNUM(rhs) && isEQorNE(node)
 			&& rhs->val>=0 && rhs->val<=255){	// 間接1バイトとの ==,!=
@@ -2945,11 +2959,37 @@ gen_skip_if_true(Node *node,char *if_true)
 		BMIPL(kind==ND_LT,if_true);
 		return;
 	}else if(isNUMorVAR(lhs) && isNUMorVAR(rhs) && isEQorNE(node)){	// ==,!= はCPXで
-		LDX_IVX(lhs,0);
-		if(!isNUMx(rhs,0)){	// CPX #0 は生成しない
+        if(isVAR(lhs) && lv_search_reg_var("X",lhs->str)){	// 既にXにVarがあるときはCPXだけ生成
 			CPX_IV(rhs);
+		}else{
+			LDX_IVX(lhs,0);
+			if(!isNUMx(rhs,0)){	// LDX直後のCPX #0 は生成しない
+				CPX_IV(rhs);
+			}
 		}
 		BEQNE(kind==ND_EQ,if_true);
+		return;
+	}else if(isVAR(lhs) && isNUM(rhs) && (rhs->val==0) && (kind==ND_LE||kind==ND_GT)){
+//		  && lv_search_reg_var("X",lhs->str)){			// VAR<=0, VAR>0 かつ VarがIXにある
+		// Var<=0	;	Var>0
+		// CPX	#0	;	CPX	#0
+		// BEQ	T	;	BMI	F
+		// BMI	T	;	BNE	T
+		// F		;	F
+		char *if_false = new_label();
+		if(!lv_search_reg_var("X",lhs->str)){
+			LDX_V(lhs->str);
+		}else{
+			CPX_I(0);
+		}
+		if(kind==ND_LE){
+			BEQ(if_true);
+			BMI(if_true);
+		}else{	// ND_GT
+			BEQ(if_false);
+			BPL(if_true);
+			LABEL(if_false);
+		}
 		return;
 	}else if(isARRAY1(lhs) && isNUM(rhs) && isEQorNE(node)
 			&& rhs->val>=0 && rhs->val<=255){	// 間接1バイトとの ==,!=
@@ -3898,6 +3938,14 @@ gen_stmt(Node *node)
 				gen_skip_if_true(node->lhs,if_true);
 				JMP(DO_LOOP);
 				LABEL(if_true);
+				return;
+			}
+			if(isNUM(node->lhs)){				// @=(定数)
+				if(node->lhs->val==0){			// @=(0)
+					JMP(DO_LOOP);				// 無限ループ
+				}else{
+					// 最初から条件が成立しているので何も生成しない
+				}
 				return;
 			}
 //			printf("; until expr: ");print_nodes_ln(node->lhs);
