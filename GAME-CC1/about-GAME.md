@@ -16,9 +16,8 @@ The programs that have been released are listed in the table below, but they hav
 
 ### Interpreter
 
-+-----------+-----------+-------+
 |Name		|System		|CPU	|
-+-----------+-----------+-------+
+|-----------|-----------|-------|
 |GAME		|H68/TR		|MC6800 |
 |GAME68		|H68/TR+TV	|MC6800 |
 |GAME80		|TK-80BS	|i8080	|
@@ -31,20 +30,20 @@ The programs that have been released are listed in the table below, but they hav
 |GAME-L3	|BM Level3	|6809	|
 |GAME-SMC	|SMC-70		|Z80	|
 |GAME-FM	|FM-7/8/11	|6809	|
-+-----------+-----------+-------+
+|-----------|-----------|-------|
 
 ### Compiler
 
 +-----------------------+-----------+-------+
-|Name |System |CPU |
-+-----------------------+-----------+-------+
-|GAME80 Compiler |TK-80BS |i8080 |
-|GAME-MZ Compiler |MZ-80 |Z80 |
-|GAME-APPLE Compiler |APPLE II |6502 |
-|GAME-PC Compiler |PC-8001 |Z80 |
-|GAME68 Compiler |H68/TR |MC6800 |
-|GAME-FM Compiler |FM-7/8/11 |MC6809 |
-+-----------------------+-----------+-------+
+|Name					|System		|CPU	|
+|-----------------------|-----------|-------|
+|GAME80 Compiler		|TK-80BS	|i8080	|
+|GAME-MZ Compiler		|MZ-80		|Z80	|
+|GAME-APPLE Compiler	|APPLE II	|6502	|
+|GAME-PC Compiler		|PC-8001	|Z80	|
+|GAME68 Compiler		|H68/TR		|MC6800	|
+|GAME-FM Compiler		|FM-7/8/11	|MC6809 |
+|-----------------------|-----------|-------|
 
 - , General Algorithimic Micro Expression (TBN),ASCII, 1978(5)
 - GAME A new language for microcomputers, ASCII, 1978(7), p.66
