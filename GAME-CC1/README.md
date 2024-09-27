@@ -2,6 +2,9 @@
 
 by ZUKERAN, shin  (@zu2, TEW SOFT)
 
+This is a practice of a compiler for the GAME language. It will be converted to MC6800 assembly language.
+I created it on MacOS, but it doesn't use any special routines so it should work on Linux too.
+
 GAME言語のコンパイラの習作です。MC6800のアセンブリ言語に落とします。
 MacOSで作成しましたが、特別なルーチンは使っていないのでLinuxでも動くはず。
 
