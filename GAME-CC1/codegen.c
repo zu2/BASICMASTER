@@ -1687,7 +1687,15 @@ void	STX_V(char *v);
 
 void	CLR_V(char *v)
 {
-		if(lv_search_reg_const_val("X",0)){
+		if(lv_search_reg_const_val("D",0)){
+			STD_V(v);
+		}else if(lv_search_reg_const_val("B",0)){
+			STAB_V1(v);
+			STAB_V0(v);
+		}else if(lv_search_reg_const_val("A",0)){
+			STAA_V1(v);
+			STAA_V0(v);
+		}else if(lv_search_reg_const_val("X",0)){
 			STX_V(v);
 		}else{
 			CLR_V1(v);
@@ -2056,15 +2064,8 @@ void	SKIP2()
 //		LEAX	D,X
 void	ADX()
 {
-#if		1
 		JSR("ADX");
 		lv_free_reg_ABDX();
-#else
-		STX_L("ADXWK");
-		ADD_L("ADXWK");
-		STD_L("ADXWK");
-		LDX_L("ADXWK");
-#endif
 }
 //		TFR	D,X
 char	*TDX()
@@ -2613,21 +2614,6 @@ gen_skip_if_false(Node *node,char *if_false)
 	Node	*lhs = node->lhs;
 	Node	*rhs = node->rhs;
 	if(kind==ND_RELADD){		// 関係演算子同士のADD
-#if	0
-		if(!has_side_effect(rhs)){	// 右項に副作用がなければショートカット
-			char *if_true = new_label();
-			gen_skip_if_true(lhs,if_true);
-			gen_skip_if_false(rhs,if_false);
-			LABEL(if_true);
-			return;
-		}else if(!has_side_effect(lhs)){	// 左項に副作用がなければショートカット
-			char *if_true = new_label();
-			gen_skip_if_true(rhs,if_true);	// 右から処理する
-			gen_skip_if_false(lhs,if_false);
-			LABEL(if_true);
-			return;
-		}
-#endif
 		gen_compare8(lhs);
 		char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 		STAB_V1(tmp);
@@ -2637,17 +2623,6 @@ gen_skip_if_false(Node *node,char *if_false)
 		return;
 	}
 	if(kind==ND_RELMUL){		// 関係演算子同士のMUL
-#if	0
-		if(!has_side_effect(rhs)){	// 右項に副作用がなければショートカット
-			gen_skip_if_false(lhs,if_false);
-			gen_skip_if_false(rhs,if_false);
-			return;
-		}else if(!has_side_effect(lhs)){	// 左項に副作用がなければショートカット
-			gen_skip_if_false(rhs,if_false);	// 右から処理する
-			gen_skip_if_false(lhs,if_false);
-			return;
-		}
-#endif
 		gen_compare8(lhs);
 		char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 		STAB_V1(tmp);
@@ -2753,22 +2728,8 @@ gen_skip_if_false(Node *node,char *if_false)
 		}
 		BNEEQ(kind==ND_EQ,if_false);
 		return;
-	}else if(isNUMorVAR(rhs)
-		|| (isARRAY2(rhs) && is_simple_array(rhs))){// 右は定数か変数か単純配列
-		gen_expr(lhs);			// AccABに結果がある
-		int	 offset;
-		if(isARRAY2(rhs)){
-			char *tmp;
-			if((tmp=gen_array_laddress(rhs,"D",&offset))==NULL){
-				printf("; gen_skip_if_false: ");print_nodes_ln(rhs);
-				error("; gen_skip_if_false: gen_arrary_laddress returns NULL");
-			}
-			LDX_V(tmp);
-		}
-//		printf("; gen_skip_if_false NUM or VAR or Simple Array:");print_nodes_ln(node);
-		gen_branch_if_false(kind,rhs,offset,if_false);
-		return;
-	}else if (isARRAY2(lhs) && is_simple_array(lhs)){
+	}else if (isARRAY2(lhs) && is_simple_array(lhs)
+			&& !(isARRAY2(rhs) && is_simple_array(rhs))){
 		// 左が単純配列のときは左右入れ替えて生成
 		Node *new = new_binary(flip_lr(kind),rhs,lhs);
 		gen_skip_if_false(new,if_false);
@@ -2779,7 +2740,22 @@ gen_skip_if_false(Node *node,char *if_false)
 		return;
 	}else{
 //		printf("; gen_skip_if_false:");print_nodes_ln(node);
+		printf("; gen_skip_if_false expr rel expr: ");print_nodes_ln(rhs);
 		gen_expr(lhs);
+		if(isNUMorVAR(rhs)
+		|| (isARRAY2(rhs) && is_simple_array(rhs))){ // 右は定数・変数・単純配列
+			int offset=0;
+			if(isARRAY2(rhs)){
+				char *tmp;
+				if((tmp=gen_array_laddress(rhs,"D",&offset))==NULL){
+					printf("; gen_skip_if_false: ");print_nodes_ln(rhs);
+					error("; gen_skip_if_false(2): gen_arrary_laddress returns NULL");
+				}
+				LDX_V(tmp);
+			}
+			gen_branch_if_false(kind,rhs,offset,if_false);
+			return;
+		}
 		char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 		STD_V(tmp);
 		gen_expr(rhs);
@@ -2874,17 +2850,6 @@ gen_skip_if_true(Node *node,char *if_true)
 	Node	*lhs = node->lhs;
 	Node	*rhs = node->rhs;
 	if(kind==ND_RELADD){				// 関係演算子同士のADD
-#if	0
-		if(!has_side_effect(rhs)){	// 右項に副作用がなければショートカット
-			gen_skip_if_true(lhs,if_true);
-			gen_skip_if_true(rhs,if_true);
-			return;
-		}else if(!has_side_effect(lhs)){	// 左項に副作用がなければショートカット
-			gen_skip_if_true(rhs,if_true);	// 右から処理する
-			gen_skip_if_true(lhs,if_true);
-			return;
-		}
-#endif
 		gen_compare8(lhs);
 		char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 		STAB_V1(tmp);
@@ -2894,21 +2859,6 @@ gen_skip_if_true(Node *node,char *if_true)
 		return;
 	}
 	if(kind==ND_RELMUL){		// 関係演算子同士のMUL
-#if	0
-		if(!has_side_effect(rhs)){	// 右項に副作用がなければショートカット
-			char *if_false = new_label();
-			gen_skip_if_false(lhs,if_false);
-			gen_skip_if_true(rhs,if_true);
-			LABEL(if_false);
-			return;
-		}else if(!has_side_effect(lhs)){	// 左項に副作用がなければショートカット
-			char *if_false = new_label();
-			gen_skip_if_false(rhs,if_false);	// 右から処理する
-			gen_skip_if_true(lhs,if_true);
-			LABEL(if_false);
-			return;
-		}
-#endif
 		gen_compare8(lhs);
 		char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 		STAB_V1(tmp);
@@ -3020,27 +2970,30 @@ gen_skip_if_true(Node *node,char *if_true)
 		}
 		BEQNE(kind==ND_EQ,if_true);
 		return;
-	}else if(isNUMorVAR(rhs)									// 左は式、右は定数か変数
-	      ||(isARRAY2(rhs) && is_simple_array(rhs))){	// もしくは単純配列
-		gen_expr(lhs);					// AccABに結果がある
-		int	 offset;
-		if(isARRAY2(rhs)){
-			char *tmp;
-			if((tmp=gen_array_laddress(rhs,"D",&offset))==NULL){
-				printf("; gen_skip_if_true: ");print_nodes_ln(rhs);
-				error("; gen_skip_if_true: gen_arrary_laddress returns NULL");
-			}
-			LDX_V(tmp);
-		}
-		gen_branch_if_true(kind,rhs,offset,if_true);
-		return;
-	}else if (isARRAY2(lhs) && is_simple_array(lhs)){
+	}else if (isARRAY2(lhs) && is_simple_array(lhs)
+			&& !(isARRAY2(rhs) && is_simple_array(rhs))){
 		// 左が単純配列のときは左右入れ替えて生成
+//		printf("; gen_skip_if_true flip_lr:");print_nodes_ln(node);
 		Node *new = new_binary(flip_lr(kind),rhs,lhs);
 		gen_skip_if_true(new,if_true);
 		return;
 	}else{
+		printf("; gen_skip_if_true expr rel expr: ");print_nodes_ln(rhs);
 		gen_expr(lhs);
+		if(isNUMorVAR(rhs)
+		|| (isARRAY2(rhs) && is_simple_array(rhs))){	// 右は定数・変数・単純配列
+			int offset=0;
+			if(isARRAY2(rhs)){
+				char *tmp;
+				if((tmp=gen_array_laddress(rhs,"D",&offset))==NULL){
+					printf("; gen_skip_if_true: ");print_nodes_ln(rhs);
+					error("; gen_skip_if_true(2): gen_arrary_laddress returns NULL");
+				}
+				LDX_V(tmp);
+			}
+			gen_branch_if_true(kind,rhs,offset,if_true);
+			return;
+		}
 		char *tmp = lv_search_free_tmp();		// lhsはTMPに保存する
 		STD_V(tmp);
 		gen_expr(rhs);
@@ -3849,24 +3802,6 @@ gen_stmt(Node *node)
 						STAB_X0(offset);
 					}
 					return;
-#if	0
-				}else if(isNUMorVAR(rhs)){
-					int offset;
-					char *tmp = gen_array_laddress(lhs,"",&offset);	// X=adrs, offset=subscript
-					LDD_IVX(rhs,0);
-					LDX_V(tmp);
-					STD_X(offset);
-					return;
-				}else if(isARRAY2(rhs) && is_simple_array(rhs)){
-					int	off1,off2;
-					char *tmp1 = gen_array_laddress(lhs,"",&off1);
-					char *tmp2 = gen_array_laddress(rhs,"",&off2);
-					LDX_V(tmp2);
-					LDD_X(off2);
-					LDX_V(tmp1);
-					STD_X(off1);
-					return;
-#endif
 				}
 				int  offset;
 				char *tmp = gen_array_laddress(lhs,"",&offset);

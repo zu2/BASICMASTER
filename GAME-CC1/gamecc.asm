@@ -181,7 +181,7 @@ MOD10E	RTS					; 5 1
 *	MULTIPLY Dr Jefyll's method
 *			cf. http://forum.6502.org/viewtopic.php?p=19958#p19958
 *	MULTIPLY	AB = (IX,IX+1)*AB	;	The destination indicated by IX will not be destroyed.
-*	MULTIPLYX	AB = IX*AB			;	The destination indicated by IX will not be destroyed.
+*	MULTIPLYX	AB = IX*AB			;	IX will be destroyed.
 *
 MULTIPLY	LDX		0,X				;   6 2		呼び出し元でW66に入れてから呼びたいが難しい
 MULTIPLYX	STX		W66				;	4 2
