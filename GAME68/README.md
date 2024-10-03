@@ -2,6 +2,8 @@
 
 GAME68 interpriter for Hitach BASIC MASTER.
 
+- [GAME language](https://github.com/zu2/BASICMASTER/blob/main/GAME-CC1/about-GAME.md)
+
 ## original source code
 
 月刊アスキーの1978年7月号から10月号（エンサイクロペディア・アスキー Vol.2,3）
