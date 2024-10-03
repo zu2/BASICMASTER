@@ -323,6 +323,11 @@ Node	*node_opt(Node	*old)
 			return new_node_num(1);
 		}
 #endif
+	}else if(node->kind==ND_MOD){
+		if(isNUMorVAR(node->lhs)){
+			return	new_node_var("MOD");
+		}
+		return	node;
 	}else if(node->kind==ND_NEG){
 		if(node->lhs->kind==ND_NEG){
 			return node->lhs->lhs;		// 単項マイナスの連続は消す
@@ -572,19 +577,24 @@ const_opt(Node *old)
 		}
 		return node;
 	}else if(node->kind==ND_MOD){
-		if(node->lhs->kind==ND_NUM && node->rhs->kind==ND_NUM
-		&& node->rhs->val!=0){
-			return new_node_num(node->lhs->val%node->rhs->val);
-		}
-		if(!isNUM(node->rhs)){
+		if(node->lhs->kind==ND_DIV){						// %(expr/expr)
+			Node *lhs = node->lhs->lhs;
+			Node *rhs = node->lhs->rhs;
+			if(isNUM(lhs) && isNUM(rhs) && rhs->val!=0){	// %(const/const)
+				return new_node_num(node->lhs->lhs->val%node->lhs->rhs->val);
+			}
+			if(isNUM(rhs)){									// %(expr/const)
+				switch(node->rhs->val){
+				case 1:		return 0;
+				default:	break;
+				}
+			}
 			return node;
 		}
-		switch(node->rhs->val){
-		case 1:		return 0;
-		default:	break;
+		if(isNUM(node->lhs)){								// %(const)
+			return	new_node_var("MOD");					// 変数MODを参照するコードに
 		}
 		return node;
-	}else if(node->kind==ND_MOD){
 	}
 	return	node;
 }

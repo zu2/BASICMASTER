@@ -2693,8 +2693,9 @@ gen_skip_if_false(Node *node,char *if_false)
 		BNEEQ(kind==ND_EQ,if_false);
 		return;
 #if	EMU_CPU_BUGS
-	}else if(isVAR(lhs) && isNUM(rhs) && (rhs->val==0) && (kind==ND_LE||kind==ND_GT)){
-//		  && lv_search_reg_var("X",lhs->str)){			// VAR<=0, VAR>0 かつ VarがIXにある
+	}else if(isVAR(lhs) && isNUM(rhs)
+		  &&(rhs->val==0)
+		  &&(kind==ND_LE||kind==ND_GT)){		// VAR<=0 または VAR>0
 		// Var<=0		Var>0
 		// CPX	#0	;	CPX #0
 		// BNE	F	;	BEQ	F
@@ -2740,7 +2741,7 @@ gen_skip_if_false(Node *node,char *if_false)
 		return;
 	}else{
 //		printf("; gen_skip_if_false:");print_nodes_ln(node);
-		printf("; gen_skip_if_false expr rel expr: ");print_nodes_ln(rhs);
+//		printf("; gen_skip_if_false expr rel expr: ");print_nodes_ln(rhs);
 		gen_expr(lhs);
 		if(isNUMorVAR(rhs)
 		|| (isARRAY2(rhs) && is_simple_array(rhs))){ // 右は定数・変数・単純配列
@@ -2928,8 +2929,9 @@ gen_skip_if_true(Node *node,char *if_true)
 		BEQNE(kind==ND_EQ,if_true);
 		return;
 #if	EMU_CPU_BUGS
-	}else if(isVAR(lhs) && isNUM(rhs) && (rhs->val==0) && (kind==ND_LE||kind==ND_GT)){
-//		  && lv_search_reg_var("X",lhs->str)){			// VAR<=0, VAR>0 かつ VarがIXにある
+	}else if(isVAR(lhs) && isNUM(rhs)
+		  &&(rhs->val==0)
+		  &&(kind==ND_LE||kind==ND_GT)){	//	VAR<=0 または VAR>0
 		// Var<=0	;	Var>0
 		// CPX	#0	;	CPX	#0
 		// BEQ	T	;	BMI	F
@@ -2978,7 +2980,7 @@ gen_skip_if_true(Node *node,char *if_true)
 		gen_skip_if_true(new,if_true);
 		return;
 	}else{
-		printf("; gen_skip_if_true expr rel expr: ");print_nodes_ln(rhs);
+//		printf("; gen_skip_if_true expr rel expr: ");print_nodes_ln(rhs);
 		gen_expr(lhs);
 		if(isNUMorVAR(rhs)
 		|| (isARRAY2(rhs) && is_simple_array(rhs))){	// 右は定数・変数・単純配列
@@ -4131,7 +4133,7 @@ gen_stmt(Node *node)
 					STX_V(node->str);							// 6 3
 				}
 			}else if(isARRAY(node->lhs)){						// Z=A(I) or Z=A:I)
-				printf("; ND_SETVAR ");print_nodes_ln(node);
+//				printf("; ND_SETVAR ");print_nodes_ln(node);
 				int offset = gen_array_address(node->lhs,"");	// IXにA(I) or A:I)のアドレスが入る
 				if(isARRAY1(node->lhs)){
 					LDAB_X0(offset);
