@@ -14,7 +14,11 @@ MacOSで作成しましたが、特別なルーチンは使っていないので
 
 ## コンパイル方法
 
-./gamecc ソースコード > アセンブラソース
+```
+.game.mot: $(OBJS) gamecc
+		./gamecc $< |tee $*.asm
+		a09 -oM00 -S$*.mot -L$*.lst $*.asm
+```
 
 ## 実行方法
 
