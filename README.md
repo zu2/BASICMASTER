@@ -42,6 +42,7 @@ blog: [https://www.zukeran.org/shin/d/category/pc/basicmaster/](https://www.zuke
 - アセンブラソースを出力します。[a09](https://github.com/Arakula/A09)でアセンブルできます。
 - 10-50倍程度に高速化されます。
 - 詳細は [GAME-CC1/README.md](GAME-CC1/README.md) 参照
+- 画面表示、キー入力などのサブルーチン([GAME-CC1/gamecc.asm](GAME-CC1/gamecc.asm))を変更すれば、MC6800/MC6802を使った他機種でも動くと思います。
 
 ## KUMAJIRI
 
