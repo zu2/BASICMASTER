@@ -42,6 +42,9 @@ The programs that have been released are listed in the table below, but they hav
 |GAME68 Compiler		|H68/TR		|MC6800	|
 |GAME-FM Compiler		|FM-7/8/11	|MC6809 |
 
+
+## Monthly ASCII Magazine
+
 - , General Algorithimic Micro Expression (TBN),ASCII, 1978(5)
 - GAME A new language for microcomputers, ASCII, 1978(7), p.66
 - GAME Part 2: Research on interpreters, ASCII, 1978(8), p.42
