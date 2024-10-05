@@ -34,6 +34,7 @@ blog: [https://www.zukeran.org/shin/d/category/pc/basicmaster/](https://www.zuke
 - GAME-MBに合わせて機能追加しています。
 - 変数・特殊変数を0ページではなく4ページに置いているので、GAME Compilerを作るのは大変かも
 - 詳細は [GAME68/README.md](GAME68/README.md) 参照
+- GAME言語については[GAME-CC1/about-GAME.md](GAME-CC1/about-GAME.md) 参照
 
 ## GAME-CC1 (GAME68 cross compiler)
 
