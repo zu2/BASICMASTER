@@ -49,6 +49,10 @@ blog: [https://www.zukeran.org/shin/d/category/pc/basicmaster/](https://www.zuke
 - KUMAJIRI compiler
 - 詳細は [KUMAJIRI/README.md](KUMAJIRI/README.md) 参照
 
+## micro PASCAL 68
+
+- ASCII誌に掲載されたmicro PASCAL 68を動かすためのパッチです
+
 ## bmtexttool
 
 - UNIX環境とBASIC MASTER内とのテキストデータの変換ツール
