@@ -52,6 +52,7 @@ blog: [https://www.zukeran.org/shin/d/category/pc/basicmaster/](https://www.zuke
 ## micro PASCAL 68
 
 - ASCII誌に掲載されたmicro PASCAL 68を動かすためのパッチです
+- 詳細は [microPASCAL68/README.md](microPASCAL68/README.md) 参照
 
 ## bmtexttool
 
