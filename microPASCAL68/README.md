@@ -109,3 +109,8 @@ MUSIC・浮動小数点演算ワーク領域を使っているので、音楽は
     - SAVE(S),LOAD(A)コマンドの追加。$2040-$20F3にSAVE/LOADルーチン
 - BASIC MASTER USER'S GROUP      1982 MAY,JUN p.3
     - プリンタ出力、1200bps SAVE/LOAD
+
+## 実行例
+
+![micropascal-1.png](micropascal-1.png)
+![micropascal-2.png](micropascal-2.png)
