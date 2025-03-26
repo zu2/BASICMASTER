@@ -34,7 +34,7 @@ D4は回路図2/3につながっているはずだが、回路図が無い…
 
 bm2ではエミュレートされていない。ebmjr、j68はOK。MAMEは調査してない。
 
-cf. [http://cmpslv2.starfree.jp/Bmjr/EnrBm.htm](https://web.archive.org/web/20241129193803/http://cmpslv2.starfree.jp/Bmjr/EnrBm.htm)
+cf. [http://cmpslv3.stars.ne.jp/Bmjr/EnrBm.htm](http://cmpslv3.stars.ne.jp/Bmjr/EnrBm.htm)
 
 ## 変数表現
 
