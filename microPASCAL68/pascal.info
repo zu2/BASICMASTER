@@ -1,0 +1,132 @@
+include ../rom/mon.info
+include ../rom/workarea.info
+comment 2060 Command A
+unused 2080-20df
+data 20e0-20ff
+code 2100
+char 20f4-20ff
+data 2127-2147
+data 216d-2174
+code 2177
+comment 219d command jump table A-
+cvec 219d-21c4
+comment 21CA Command M
+comment 2246 Command E
+comment 2261 Command B
+comment 2273 Command I
+comment 2286 Command R
+comment 22C2 Command D
+comment 22e6 93:KGRBL(Global var),94:KLOCL(Local var),95:KLB(Proc call)
+comment 22ee 8E:KTHEN,8F:KELSE,90:KDO,91:KHEXA,92:KDCML
+comment 22FE Command P
+comment 2317 Command T
+comment 231D Command N
+comment 2331 Command L
+comment 24d0 identifier table. length+identifier
+comment 24d0 $60:PROC, $61:FUNC...
+data 24d1-25a6
+comment 25dd analyze identifier
+comment 2642 AccA: A-Z?
+label 2642 TSTAZ
+comment 2649 AccA: A-Z0-9?
+label 2649 TSTVAR
+comment 26b3 AccA: 0-9?
+label 26b3 TSTNO
+comment 2726 Command F
+comment 281E Command C
+comment 2849 Command K
+comment 284E Command G
+comment 28d9 read a byte from program text and update line number.
+comment 28fb pick up name (label)
+label 28fb PICLBL
+comment 2904 not A-Z, Error 0 (illegal charactor)
+comment 2982 table search / Z=0:fount, Z=1:not found
+comment 2b7f Do parsing
+label 2b7f PROC
+comment 2bd1 60-63? (60:KPROC,61:FUNC,62:KARR,63:KVAR)
+comment 2bd5 >6F? (70:KEND,71:KUNTI...)
+cvec 2bdd-2bf4
+comment 2c0e comment? '%'
+comment 2ca6 Use CPX to skip 2 bytes
+data 2ca6
+data 2ca9
+data 2cac
+data 2caf
+data 2cb2
+data 2cb5
+data 2cb8
+data 2cbb
+data 2cbe
+comment 2c21 'A'-'Z' ?
+data 2cc1
+label 2cc7 KBEGIN
+comment 2cc7 64:BEGIN
+label 2cfa KIF
+comment 2cfa 65:IF
+label 2cf2 KWHILE
+comment 2cf2 66:WHILE
+label 2cda KREPEAT
+comment 2cda 67:REPEAT
+label 2d41 KPUT
+comment 2d41 68:PUT(
+label 2d55 KWRITE
+comment 2d55 69:WRITE(
+label 2d78 KOUT
+comment 2d78 6A:OUT(
+label 2d78 KPOKE
+comment 2d78 6B:POKE(
+label 2d85 KCALL
+comment 2d85 6C:CALL
+label 2c48 KSTOP
+comment 2c48 6D:STOP
+label 2ce3 KFOR
+comment 2ce3 6E:FOR
+label 2d9d KREAD
+comment 2d9d 6F:READ(
+label 2e5d ERROR0
+data 2e5e
+data 2e61
+data 2e64
+data 2e67
+comment 2e68 Error 14 Not a variable
+label 2e68 ERROR14
+data 2e6a
+code 2e6b
+data 2e6d
+data 2e70
+data 2e73
+data 2e76
+data 2e79
+data 2e7c
+data 2e8a-2e95
+data 2ea3-2eaa
+data 2eb8-2ebc
+data 2ec1-2ec7
+code 2ec8
+comment 2EE2 Command J,O,Q
+cvec 2fa4-2fbb
+cvec 3248-3257
+label 00c6 RNDV
+label 00c8 SBADR
+label 00ca TBLEND
+label 00cc SKTOP
+label 00cd SKTOP+1
+label 00ce VARAD
+label 00cf VARAD+1
+label 00d0 EDINT
+label 00d1 EDINT+1
+label 00d2 LNO
+label 00d3 WORK
+label 00d4 PAS
+label 00d5 PAS+1
+label 00d6 AENDMR
+label 00d7 AENDMR+1
+label 00d8 STKTP
+label 00d9 STKTP+1
+label 00da BOFA
+label 00db BOFA+1
+label 00dc FLEND
+label 00dd FLEND+1
+label 00de EOF
+label 00df EOF+1
+label 00e0 PINT
