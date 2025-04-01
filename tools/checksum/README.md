@@ -23,7 +23,7 @@ change address for JMP, LDX #
 
 # demo
 
-[!checksum-dump.png](./checksum-dump.png)
+![checksum-dump.png](./checksum-dump.png)
 
 
 # reference
