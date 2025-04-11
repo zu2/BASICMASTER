@@ -36,7 +36,7 @@ bm2ではエミュレートされていない。ebmjr、j68はOK。MAMEは調査
 
 cf. [http://cmpslv3.stars.ne.jp/Bmjr/EnrBm.htm](http://cmpslv3.stars.ne.jp/Bmjr/EnrBm.htm)
 
-## 変数表現
+## L2 BASICの変数表現
 
 2通り。-32767〜32767までの整数か、仮数4バイト・指数1バイトの浮動小数。演算時には仮数をさらに1バイト追加して演算精度を高めている。
 
