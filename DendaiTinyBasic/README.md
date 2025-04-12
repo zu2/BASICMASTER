@@ -36,9 +36,11 @@ TinyBASICもモニタサブルーチンを利用するので、前半は使え�
 
 ## 資料
 
-- [マイ・コンピュータをつかう](https://amzn.to/3yoproY)」（講談社ブルーバックス 1978年4月25日)
-- [Bit誌1978年8月号](https://amzn.to/4bCmak8)(共立出版)
+- [マイ・コンピュータをつかう](https://amzn.to/3yoproY)」（講談社ブルーバックス 1978年4月25日)（ダンプリスト）
+- [Bit誌1978年8月号](https://amzn.to/4bCmak8)(共立出版)（ソースリスト）
+[マイコン手づくり塾 : コンピュータテクニックを完全マスター - 国立国会図書館デジタルコレクション](https://dl.ndl.go.jp/pid/12627349/1/148)(ソースリスト）
 - [MIKBUGプチ拡張 (Old MC6800)](https://oando.web.fc2.com/old_mc6800/f100_414.htm)
+	- Bit誌掲載バージョンから改良されているらしい
 - [SBC6303で電大版TinyBASICを動かす | KUNINET BLOG](https://kuninet.org/2018/06/13/sbc6303%E3%81%A7%E9%9B%BB%E5%A4%A7%E7%89%88tinybasic%E3%82%92%E5%8B%95%E3%81%8B%E3%81%99/)
 - [HD6303で電大版TINY BASIC：8bitマイコンで遊ぶ：SSブログ](https://baraki.blog.ss-blog.jp/2018-11-08)
 - [Nakamozu Tiny Basic /ASCII](https://hyamasynth.web.fc2.com/ACII_NTB/ACII_NTB.html)
