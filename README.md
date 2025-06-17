@@ -51,7 +51,8 @@ blog: [https://www.zukeran.org/shin/d/category/pc/basicmaster/](https://www.zuke
 
 ## micro PASCAL 68
 
-- ASCII誌に掲載されたmicro PASCAL 68を動かすためのパッチです
+ ASCII誌に掲載されたmicro PASCAL 68を動かすためのパッチです
+
 - 詳細は [microPASCAL68/README.md](microPASCAL68/README.md) 参照
 
 ## bmtexttool
@@ -63,6 +64,20 @@ blog: [https://www.zukeran.org/shin/d/category/pc/basicmaster/](https://www.zuke
 
 - Fuzix Compiler Kit でベーシックマスター用のプログラムを書くためのツール
 - [zu2/fcc-for-basicmaster: Fuzix Compiler Kit for Hitach BASICMASTER](https://github.com/zu2/fcc-for-basicmaster)
+
+## C言語について
+
+クロスコンパイラを用いて開発できます。
+
+- [EtchedPixels/Fuzix-Compiler-Kit: Fuzix C Compiler Project](https://github.com/EtchedPixels/Fuzix-Compiler-Kit)
+- [zu2/CC6303: A C compiler for the 6800 series processors](https://github.com/zu2/CC6303)
+- [zu2/chibicc-6800-v1: A Small C Compiler for MC6800 (fork from chibicc)](https://github.com/zu2/chibicc-6800-v1)
+
+kwhr0さんのページが参考になります。
+
+- [6800エミュレータを書いたのでベーシックマスターJr.に載せてCC6303でクロス開発してみた](http://kwhr0.g2.xrea.com/bm2.html)
+- [kwhr0/bm2-baremetal-demo](https://github.com/kwhr0/bm2-baremetal-demo)
+- [kwhr0/bm2-xevious](https://github.com/kwhr0/bm2-xevious#)
 
 ## Documents
 
