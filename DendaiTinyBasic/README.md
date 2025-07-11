@@ -10,6 +10,8 @@ Softwares and Documents for Hitach BASIC MASTER L2/L2II/Jr.
 
 ## BASICMASTERへの移植
 
+この移植版は1981年にbit誌のソースを元に作成したものです。
+
 大抵の言語処理系は0ページを山ほど使っているので、これをどこに移動するかが常に問題になります。
 
 BASICMASTERではモニタが00-71、BASICが72-FFを使っていてほとんど空きがありません。
