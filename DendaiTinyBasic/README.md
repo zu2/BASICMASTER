@@ -67,3 +67,17 @@ OKプロンプト画面が出れば成功です。
 - [Bequest333のページ 電大版TINYBASIC for PIC　ミニマムお試し版2](https://www3.hp-ez.com/hp/bequest333/page29)
 - [fishhack66/6800-6809-Stuff: Various bits and bobs for the Motorola processors](https://github.com/fishhack66/6800-6809-Stuff/tree/main)
 
+## その他
+
+安田寿明氏は 早くからTinyBASICの可能性を見いだし 雑誌で紹介していた。
+
+- [“Tiny BASIC”への招待①- コンピュートピア1977年3月号 P.85](https://dl.ndl.go.jp/pid/3249995/1/45)
+	- 8080版デンバー・タイニイBASICのソースあり
+- [“Tiny BASIC”への招待②- コンピュートピア1977年4月号 P.69](https://dl.ndl.go.jp/pid/3249996/1/37)
+	- LLL8080（ポテト）BASICインタプリタ ソース・オブジェクトリスト①
+- [“Tiny BASIC”への招待③- コンピュートピア1977年5月号 P.55](https://dl.ndl.go.jp/pid/3249997/1/30)
+	- LLL8080（ポテト）BASICインタプリタ ソース・オブジェクトリスト②
+- [“Tiny BASIC”のすすめ①- コンピュートピア1977年8月号 P.101](https://dl.ndl.go.jp/pid/3250001/1/53)
+	- デンバー・タイニイBASICフルアセンブルリスト
+- [“Tiny BASIC”のすすめ②- コンピュートピア1977年10月号 P.73](https://dl.ndl.go.jp/pid/3250003/1/39)
+	- 各種Tiny BASICの言語仕様・性能比較表あり
