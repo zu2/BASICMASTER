@@ -45,6 +45,8 @@ cf. [http://cmpslv3.stars.ne.jp/Bmjr/EnrBm.htm](http://cmpslv3.stars.ne.jp/Bmjr/
 8bit指数・1bit符号・31bitの仮数からなる。指数は2の補数。
 指数部が$17のときは整数値で、仮数部2バイト目・3バイト目に値が入る。4バイト目は0。1バイト目は2バイト目から符号拡張されている。
 
+![インターフェース 1980年2月号(No.33) ベーシックマスター拡張・汎用ラボオート装置の製作 P.83より引用](./BASICMASTER-L2BASIC-floating-point.png)
+
 ## 変数テーブル
 
 $700-
