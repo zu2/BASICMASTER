@@ -1,0 +1,26 @@
+comment	e000	PRINTER ROM
+lcomment	e000	LIST# INIT
+label	e000	MODE80_INIT
+label	e003	MODE80_PRINT_1CHR
+label	e006	MODE80_CLOSE
+label	e009	MODE132_INIT
+label	e00c	MODE132_PRINT_1CHR
+label	e00f	MODE132_CLOSE
+label	e012	MODE40_INIT
+label	e015	MODE40_PRINT_1CHR
+label	e018	MODE40_CLOSE
+label	e01b	PRINT_1CHR
+label	e021	CRT_COPY_CHR
+label	e02b	PRINTER_MODE_132
+label	e02d	PRINTER_MODE_40
+comment	e37e	HIRES Graphics
+label	e37e	G_MODE1
+label	e383	G_MODE12
+label	e38d	G_CLEAR1
+label	e39c	G_CLEAR2
+comment e14f	$e892=1; $e890=7; and wait
+label	e14f	G_INIT_COLOR
+data e167-e168
+comment	e400	1200bps LOAD/SAVE/VERIFY ROM
+label	e400	C1200_INIT
+data e3e6-e3f8
