@@ -93,7 +93,6 @@ kwhr0さんのページが参考になります。
 ## Emulators
 
 - [日立ベーシックマスターJr.エミュレータ bm2](https://ver0.sakura.ne.jp/pc/#bm2)
-- 
 - [eBASICMasterJr 謎WIPページ](http://takeda-toshiya.my.coocan.jp/bmjr/index.html)
 - [j68 近況報告](http://upd780c1.g1.xrea.com/pc-8001/note_j68.html)
 - [MAMEdev.org | Home of The MAME Project](https://www.mamedev.org/?p=542)

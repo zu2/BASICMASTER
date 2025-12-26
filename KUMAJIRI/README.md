@@ -86,6 +86,15 @@ KUMAJIRIのソースコードの行末はCR($0D)、ファイル末は$0Dの後�
 
 - [https://youtu.be/cs1DSGrmPYA?si=2iNDXDNd7sduzvI1](https://youtu.be/cs1DSGrmPYA?si=2iNDXDNd7sduzvI1)
 
+MP-1010K内蔵のアセンブラにも同様の問題があるらしい（BMUG会報 1982年号外 P.14に指摘あり）
+
+$80B0: $2D→$25, $80B4: $2E→$22
+
+プロンプトを"/"から"]" に変更(同記事より）
+
+$8014: $2F→$5D
+
+
 ## RANPAKU Editor版
 
 KUMAJIRIコンパイラ、中間言語インタプリタ、エディタ込みの一式セットです。
