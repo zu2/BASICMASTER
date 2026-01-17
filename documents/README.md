@@ -31,11 +31,11 @@ IC13のピン8(~ROM MASK)はIC12 74LS175M(Quadruple D-Type Flip-Flop)のCKに入
 
 cf. [http://cmpslv3.stars.ne.jp/Bmjr/EnrBm.htm](http://cmpslv3.stars.ne.jp/Bmjr/EnrBm.htm)
 
-[20260115-MB6885-EFD0-1.svg](./image/20260115-MB6885-EFD0-1.svg)
+![20260115-MB6885-EFD0-1.svg](./image/20260115-MB6885-EFD0-1.svg)
 
 ## グラフィック切り替え
 
-[20260106-bm-graphics-circuit-2.svg](./image/20260106-bm-graphics-circuit-2.svg)
+![20260106-bm-graphics-circuit-2.svg](./image/20260106-bm-graphics-circuit-2.svg)
 
 ## L2 BASIC について
 
