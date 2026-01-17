@@ -29,12 +29,13 @@ IC13のピン8(~ROM MASK)はIC12 74LS175M(Quadruple D-Type Flip-Flop)のCKに入
 - D2: ROM MASK3 F000-FFFF 1:RAM, 0:MONITOR ROM
 - D4: TIME OFF 1:ON 0:OFF
 
-D4は回路図2/3につながっているはずだが、回路図が無い…
-回路図2/3はブロックダイヤグラムから想像するに、システム系同期信号発生回路、画面表示、拡張端子あたりの回路が含まれていたと思われる)
-
-bm2ではエミュレートされていない。ebmjr、j68はOK。MAMEは調査してない。
-
 cf. [http://cmpslv3.stars.ne.jp/Bmjr/EnrBm.htm](http://cmpslv3.stars.ne.jp/Bmjr/EnrBm.htm)
+
+[20260115-MB6885-EFD0-1.svg](./image/20260115-MB6885-EFD0-1.svg)
+
+## グラフィック切り替え
+
+[20260106-bm-graphics-circuit-2.svg](./image/20260106-bm-graphics-circuit-2.svg)
 
 ## L2 BASIC について
 
