@@ -1,179 +1,5 @@
-comment 0000 see. BASIC MASTER MANUAL
-comment 0000 hook for user NMI,IRQ,BREAK NMI,TIMER
-label 0000 USRNMI
-label 0002 USRIRQ
-label 0004 BREAKV
-label 0006 TIMERV
-label 0008 RAMEND
-label 0009 RAMEND+1
-comment 000a 2^16 sec time counter
-label 000a TIME1
-label 000b TIME2
-word  000a
-comment 000c 1/60 sec time counter  (0..59)
-label 000c TIME3
-comment 000d if (TIME1,2)==(TIMER) jump to (TIMERV)
-label 000d TIMEER
-word  000d
-comment 000f cursor position X,Y (0..39,0..23)
-label 000f CURX
-label 0010 CURY
-comment 0011  if 0 do control, else display tile graphics char. after graphics char displayed, this flag clear.
-label 0011 control_or_graphic_char
-comment 0012 cursor blink 0:blink,other:not blink
-label 0012 cursor_blink
-comment 0013 NMI status F0:allow, 00:inhibit
-label 0013 nmi_status
-comment cursor character (ex. monitor:*, BASIC:_)
-label 0014 cursor_char
-commen 0015 save char on cursor position
-label 0015 cursor_char_save
-comment 0016 0:alpha, other:kana
-label 0016 kana_shift
-comment break point. address(2bytes) and save data(1byte)
-label 0017 BREAK_POINT1
-label 001A BREAK_POINT2
-label 001D BREAK_POINT3
-label 0020 BREAK_POINT4
-label 0023 BREAK_POINT5
-comment 0026 number of break point
-label 0026 BREAK_POINT_NUM
-data  0017-0026
-comment hook for keyboard input / char display
-label 0028 ASCIN
-label 002b ASCOUT
-comment 002e jump to mon_BYTIN
-label 002e BYTIN
-comment 0031 jump to mon_BYTOUT
-label 0031 BYTOUT
-label 0034 ASCOUT2
-comment 0037 display size??
-comment 0039 Save stack pointer on intterupt
-label 0039 SAVESP
-comment start/end address for record/load tape and memory transfer
-label 003b ADRTOP
-label 003c ADRTOP+1
-label 003d ADREND
-label 003e ADREND+1
-comment start/end address for memory transfer destination
-label 003F COPYTOP
-label 0040 COPYTOP+1
-label 0041 COPYEND
-label 0042 COPYEND+1
-char  0043-004a
-comment tape file name 8byte
-label 0043 FNAME
-lcomment 0049 delimiter .
-label 0049 FNAME+6
-lcomment 0049 filename extension B or S
-label 004a FNAME+7
-comment 004b file attribute
-lcomment 004b B:01, S:10
-label 004b filetype
-label 004c block number (BASIC save blocks)
-char  004d-0054
-comment 004d alter filename for compare/verify
-label 004d FNAME2
-comment 0055 Maximum character length to enter
-label 0055 max_input_len
-word  0055
-label 0056 block_len
-label 0057 tape_adrs_top
-label 0058 tape_adrs_top+1
-word  0057
-comment working area for MOVBLK,INHEX4
-label 0059 work_MOVBLK
-comment 005a 00:compare, other:store
-comment 005b Load work??
-label 005c compare_or_store
-comment 005c 00:load other:verify
-label 005c load_or_verify
-label 005d work_OUTIX
-label 005e work_OUTIX+1
-comment 0061 temporarily save IX register.
-label 0061 save_IX
-comment 0063 temporarily save IX register.
-label 0063 save_IX2
-comment 0069 char on cursor pos. 0:cursor, 1:original char.
-#label 0069 cursor_status
-label 0069 work_0069
-comment 006a check keyboard pressed? released?
-#label 006a keyboard_scan_status
-label 006a work_006a
-comment 006c keyboard scan bottom(0) to top(3)
-#label 006c keyboard_scan_read_line
-label 006c work_006c
-comment 0071 drive keyboard scan columns left(0) to right(12)
-#label 0071 keyboard_scan_drive_columns
-label 0071 work_0071
-word  006d
-label 006d work_IX
-label 006e work_IX+1
-word  006f
-label 006f save_IX
-label 0070 save_IX+1
 #
-# 72-ff BASIC work area
-#
-comment 0072 72-ff Hitachi BASIC work area
-word  00b5
-label 00b5 M_save_IX
-comment 00b7 MUSIC M transposition
-label 00b7 M_transposition
-comment 00c5 MUSIC Volume V1-5
-label 00c5 M_volume
-comment 00c6 MUSIC U/D
-label 00c6 M_octove
-comment 00c7 MUSIC P0-9
-label 00c7 M_length
-comment 00ca MUSIC Tempo T1-7
-label 00ca M_tone
-comment 00cb rest or music flag (00:rest)
-label 00cb M_rest_or_music
-comment 00cd current pitch of sound
-comment 00cd D=1,E=3,F=5,G=7,A=9,B=11,C=13, sharp++, flat--
-label 00cd M_sound
-#
-label 0100 text_vram
-label 03ff text_vram_end
-label 0400 basic_work
-label 08ff basic_work_end
-label 0a00 basic_text_start
-#
-# BASIC ROM
-#
-label b000 L2BASIC_ROM_start
-label c000 L2BASIC_start
-label d000 L1BASIC_start
-#
-# I/O area
-#
-comment e890 r/w charactor/background Color (MP-1710)
-label   e890 io_tile_color
-comment e891 r/w background color D2-0 (MP-1710)
-label   e891 io_background_color
-comment e892 r/w monocolor/color setting D0 (MP-1710)
-label   e892 io_color_setting
-comment ee00 read for stop tape
-label   ee00 io_stop_tape
-comment ee00 read for start tape
-label   ee20 io_start_tape
-comment ee40 write for display reverse 00:normal ff:reverse
-label   ee40 io_display_reverse
-comment ee80 D0:tape I/O
-comment ee80 D1-D5:ADC
-label   ee80 io_dac_and_tape
-comment eec0 when write to io_keyboard, do inhibit($00)/allow($F0) NMI mask.
-comment eec0 write D3-0 to drive E1-E13 line (keyboard line left to right)
-comment eec0 read shift key: F9:NMI F8:KANA(D7),F7:KANA symbol(D6),F6:Alpha symbol(D5),F5:alpha(D4)
-comment eec0 (shift key: 0:press, 1:release, ex. $EF=press alnum shift key )
-comment eec0 read D3-0 for key code
-label eec0 io_keyboard
-label ef00 io_timer
-label ef40 io_trace
-label ef80 io_clear_NMI
-comment efe0 screen mode D7-6,D3-2. MB-6885 only
-label efe0 io_screen_mode
+include workarea.info
 #
 label f000 jmp_mon_start
 label f003 ADDIXB
@@ -185,8 +11,8 @@ label f00f KBIN
 label f012 CHRGET
 comment f015 display 1 char. 01-0f are control code. when char is control code, return CARRY=1
 label f015 CHROUT
-label f018 LOAD
-label f01b SAVE
+label f018 mLOAD
+label f01b mSAVE
 comment f023 monitor jump table, char and address
 label f023 mon_command_table
 data f023-f04a
@@ -298,33 +124,72 @@ label f08c set_break_point
 comment f497 set SWI to each break point
 comment f49e save original instruction
 label f4ee mon_Fill
+comment f51d Bell sound: ON:253cyc,OFF:262cyc,
+comment f51d 1.325x(253+262)=682us=1.465KHz, 256times(0.175sec)
 label f51d sound_Bell
 label f531 sound_2400Hz
 label f545 sound_1200Hz
-label f57e sound_delay1
-label f586 sound_delay2
-label f565 sound_delay3
-label f588 sleep AccA
-label f593 tape_1byte_out
-label f5c4 tape_1byte_out_sub
+comment f556 Delay routines DLYnnnn: delay nnnn cyc (1cyc:1.325μs）
+label f556 DLY281
+label f558 DLY238
+label f55A DLY125
+label f55C DLY96
+label f560 DLY162
+label f562 DLY105
+label f563 DLY103
+comment f565 sound_delay3
+label f565 DLY88
+label f56A DLY51
+label f56B
+comment f56C sound_delay4
+label f56C DLY47
+label f572 DLY35
+comment f575 sound_delay5
+label f575 DLY25
+label f576 DLY23
+label f577 DLY21
+label f57c DLY7
+comment f57e delay 10ms for remove chattering
+comment f57e 7575cyc x 1.325us = 10.036875ms
+lcomment f57e DLY7575
+label f57e delay_10ms
+comment f586 delay 1s for wait tape gap
+label f586 delay_1s
+label f588 sleep_by_AccA
+label f593 tape_1byte_out_from_IX
+label f595 tape_1byte_out_A
+label f5c4 tape_block_out_from_IX
 comment f60e tape save command (Punch)
 label f60e mon_Punch
-comment mon_BYTOUT from BYTOUT
+comment f619 mon_BYTOUT from BYTOUT
 label f619 mon_BYTOUT
 comment f62b copy filename from FNAME to FNAME2
 comment f677 allow NMI
 label f677 mom_NMICLR
 comment f684 inhibit NMI
 label f684 mom_NMISET
-label f687 get_program_name
+label f687 get_FNAME
+label f6b5 CHROUT_CR_2
 label f6b8 print_FNAME2
 comment f6cc tape Load command
 label f6cc mon_Load
 comment f6cf tape Verify command
 label f6cf mon_Verify
+lcomment f6f5 last block ? (filetype:00)
+lcomment f6f7 it's the last block, so stop the tape and finish.
 comment f71f mon_BYTIN from BYTIN
 label f71f mon_BYTIN
+lcomment f725 out CR
+lcomment f72B skip preamble
+lcomment f738 start mark $01
+lcomment f73c get filetype 〜 load address
+lcomment f741 00:get from tape, other:compare with tape
+label f74c ERROR_MESOUT
+comment f754 read from tape AccB bytes into IX
+label f754 tape_Bbyte_in
 label f762 tape_1byte_in
+label f794 tape_1bit_in
+comment f798 $EE80:b7 Tape input
 comment f7ab output 1byte to screen
 label f7ab mon_CHROUT
 comment CHR00
@@ -383,6 +248,12 @@ label f8d7 reverse_display
 label f8dd mon_MOVBLK
 comment f8ea copy start from top address or end address
 #
+label f90a MOVBLK1
+label f913 DOWNCP
+label f930 RETSEQ
+label f933 UPCP
+comment f952 store or compare A with (IX)
+label f952 STCMP
 comment f95c monitor message string, which string is 04 terminate.
 char f95c-fa53
 label f95c mSTEP
@@ -428,18 +299,23 @@ label fa43 mPROGRAM_NAME
 data  fa43-fa53
 comment fa55 get a char from keyboard. display AccA as cursor
 comment fa55 work M0069 char on cursor pos. 0:cursor, 1:original char.
+comment fa55 (see. micom magagine 1981.3 p.150)
 label fa55 mon_CHRGET
+lcomment fa55 CGETKB (micom magazine)
 comment faa3 calculate cursor address from CURX,CURY
 comment faa3 addr = $100 + (CURY<<5) + CURX
 comment faa3 addr high = $1 + (CURY>>3)
 comment faa3 addr low  = (CURY<<5) + CURX
 label faa3 mon_CURPOS
+lcomment fab1 CLICK sound
 comment fabc +$0100 for VRAM start address
 comment fac6 get a char from keyboard.
 label fac6 mon_KBIN
 comment face kana key pressed?
 comment fad8 alpha key pressed?
 comment faf9 set NMI status from $0013
+comment fb00 keyboard scan
+comment fb00 (see. micom magagine 1981.4 p.216)
 comment fb12 main keyboard size is 4x13
 dec fb13
 comment fb22 main keyboard size is 4x13
@@ -448,6 +324,7 @@ comment fb2e shift key pressed?
 comment fb51 shift key pressed
 comment fb51 alpha symbol shift?
 comment fb90 keyboard map (KANA)
+comment fb90 $70 is unassigned key
 label fb90 keymap_kana
 data  fb90-fbc3
 label fbc4 keymap_alnum
@@ -456,7 +333,7 @@ data  fbc4-fbf7
 comment fbf8 shift keymap table. keycode,ASCII
 label fbf8 keymap_shift_alnum
 word  fbf8-fc25
-comment fc26 KANA shift keymap table?
+comment fc26 KANA shift keymap table
 label fc26 keymap_shift_kana
 word  fc26-fc49
 lcomment fc6b set music on (00:rest)
@@ -479,6 +356,8 @@ label fc4a sound
 #
 word fea3-ffe2
 #
+commend ffe3 INPUT FROM-TO ADRS (HEX4)
+label ffe3 HEXIN4_TOPEND
 comment ffe6 inhibit NMI
 label ffe6 NMISET
 comment ffe9 allow NMI
