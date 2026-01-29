@@ -33,6 +33,9 @@
 
 ## [pcornier/BasicMasterJr_MiSTer: Hitachi MB-6885](https://github.com/pcornier/BasicMasterJr_MiSTer)
 
+## The lost emulators
+
+- eMB-688X
 
 # Other info
 
