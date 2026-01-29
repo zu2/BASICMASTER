@@ -1,0 +1,266 @@
+comment 0000 see. BASIC MASTER MANUAL
+comment 0000 hook for user NMI,IRQ,BREAK NMI,TIMER
+label 0000 USRNMI
+label 0002 USRIRQ
+label 0004 BREAKV
+label 0006 TIMERV
+label 0008 RAMEND
+label 0009 RAMEND+1
+comment 000a 2^16 sec time counter
+label 000a TIME1
+label 000b TIME2
+word  000a
+comment 000c 1/60 sec time counter  (0..59)
+label 000c TIME3
+comment 000d if (TIME1,2)==(TIMER) jump to (TIMERV)
+label 000d TIMER
+word  000d
+comment 000f cursor position X,Y (0..39,0..23)
+label 000f CURX
+label 0010 CURY
+comment 0011  if 0 do control, else display tile graphics char. after graphics char displayed, this flag clear.
+label 0011 control_or_graphic_char
+comment 0012 cursor blink 0:blink,other:not blink
+label 0012 cursor_blink
+comment 0013 NMI status F0:allow, 00:inhibit
+label 0013 nmi_status
+comment cursor character (ex. monitor:*, BASIC:_)
+label 0014 cursor_char
+commen 0015 save char on cursor position
+label 0015 cursor_char_save
+comment 0016 0:alpha, other:kana
+label 0016 kana_shift
+comment break point. address(2bytes) and save data(1byte)
+label 0017 BREAK_POINT1
+label 001A BREAK_POINT2
+label 001D BREAK_POINT3
+label 0020 BREAK_POINT4
+label 0023 BREAK_POINT5
+comment 0026 number of break point
+label 0026 BREAK_POINT_NUM
+data  0017-0026
+comment 0028 monitor copy to 0028-0038 from f012-f022 at initializing
+comment 0028 hook for keyboard input / char display
+label 0028 ASCIN
+label 002b ASCOUT
+comment 002e jump to mon_BYTIN
+label 002e BYTIN
+comment 0031 jump to mon_BYTOUT
+label 0031 BYTOUT
+label 0034 ASCOUT2
+comment 0037 display size (X) $1F
+label 0037 DISPLAY_SIZE_X
+comment 0038 display size (Y) $17
+label 0038 DISPLAY_SIZE_Y
+comment 0039 Save stack pointer on intterupt
+label 0039 SAVESP
+comment 003b start/end address for record/load tape and memory transfer
+label 003b ADRTOP
+label 003c ADRTOP+1
+label 003d ADREND
+label 003e ADREND+1
+comment 003F start/end address for memory transfer destination
+label 003F COPYTOP
+label 0040 COPYTOP+1
+label 0041 COPYEND
+label 0042 COPYEND+1
+char  0043-004a
+comment 0043 tape file name 8byte
+label 0043 FNAME
+lcomment 0049 delimiter .
+label 0049 FNAME+6
+lcomment 004a filename extension B or S
+label 004a FNAME+7
+comment 004b file attribute
+lcomment 004b B:01, S:10
+label 004b filetype
+comment 004c blocknumber A (BASIC save blocks)
+label 004c block_num
+char  004d-0054
+comment 004d alter filename for compare/verify
+label 004d FNAME2
+comment 0055 Maximum character length to enter
+comment 0055 or tape block number B
+label 0055 max_input_len
+word  0055
+label 0056 block_len
+label 0057 tape_adrs_top
+label 0058 tape_adrs_top+1
+word  0057
+comment 0069 working area for MOVBLK,INHEX4
+label 0059 work_MOVBLK
+label 005a store_or_compare_A_IX
+comment 005a 00:store AccA to (IX), other:compare AccA with (IX)
+comment 005b Tape check sum
+label 005b checksum
+comment 005c Monitor($002E) 00:load 01:verify
+comment 005c BASIC   00:load 01:save 80:merge 81:verify
+label 005c load_or_verify
+label 005d work_OUTIX
+label 005e work_OUTIX+1
+comment 0061 temporarily save IX register. Montor break point routine.
+label 0061 save_IX
+comment 0063 temporarily save IX register. Monitor break point routine.
+label 0063 save_IX2
+comment 0069 char on cursor pos. 0:cursor, 1:original char.
+#label 0069 cursor_status
+label 0069 work_0069
+comment 006a check keyboard pressed? released?
+#label 006a keyboard_scan_status
+label 006a work_006a
+comment 006c keyboard scan bottom(0) to top(3)
+#label 006c keyboard_scan_read_line
+label 006c work_006c
+word  006d
+label 006d work_IX
+label 006e work_IX+1
+word  006f
+comment 006f temporarily save IX register. Monitor CHROUT routine.
+label 006f save_IX3
+label 0070 save_IX3+1
+comment 0071 drive keyboard scan columns left(0) to right(12)
+#label 0071 keyboard_scan_drive_columns
+label 0071 work_0071
+#
+# 72-ff BASIC work area
+#
+comment 0072 72-ff Hitachi BASIC work area
+lcomment 0072 VATBTP
+label 0072 variable_table_top
+word  0072
+lcomment 0072 BSTLTP
+label 0074 basic_top
+word  0074
+lcomment 0076 VATBTL
+label 0076 variable_table_tail
+lcomment 0078 BSTLTA
+label  0078 basic_tail
+word  0078
+lcomment 007A VARETL
+label 007A variable_area_top
+word  007A
+comment 0082 current line number
+word  0082
+word  008e
+comment 0090 BASIC instruction pointer while reading
+word  0090
+label 0090 instruction_ptr
+word  0099
+label 0099 stack_ptr
+comment 00a3 CCR at BASIC start
+byte 00a3
+comment 00a5 IF work?
+word 00a5
+comment 00a7 current line top
+word 00a7
+comment 00a9 BASIC IX work
+word 00a9
+comment 00ab BASIC next instruction pointer
+word 00ab
+comment 00ad BASIC IX work 
+word 00ad
+comment 00af BASIC IX work 
+word 00af
+;word  00b5
+;label 00b5 M_save_IX
+#
+# FAC: 00 00 00 00 00 00
+#      ^  ^ ^^^^^^^^^^^^
+#      |  | significand (no hidden bit?)
+#      |  |   2^-1,2^-2,.... 2^-39
+#      |  |
+#      |  bit7 sign
+#      2^x: exponent -128 to 127
+#          (exponent=17 integer, byte 2-3 are value)
+#
+comment 00b1 FAC (Floating Accmulator)
+label 00b1 FAC
+label 00b2 FAC+1
+label 00b3 FAC+2
+label 00b4 FAC+3
+label 00b5 FAC+4
+label 00b6 FAC+5
+data  00b1-00b6
+comment 00b7 FAC2 (Floating Accmulator 2)
+label 00b7 FAC2
+label 00b8 FAC2+1
+label 00b9 FAC2+2
+label 00ba FAC2+3
+label 00bb FAC2+4
+label 00bc FAC2+5
+data  00b7-00bc
+;comment 00b7 MUSIC M transposition
+;label 00b7 M_transposition
+comment 00c5 MUSIC Volume V1-5
+label 00c5 M_volume
+comment 00c6 MUSIC U/D
+label 00c6 M_octove
+comment 00c7 MUSIC P0-9
+label 00c7 M_length
+comment 00ca MUSIC Tempo T1-7
+label 00ca M_tone
+comment 00cb rest or music flag (00:rest)
+label 00cb M_rest_or_music
+comment 00cd current pitch of sound
+comment 00cd D=1,E=3,F=5,G=7,A=9,B=11,C=13, sharp++, flat--
+label 00cd M_sound
+comment 00ce music work ($00CE,$00D1)
+comment 00d0 music work ($00D0,$00D1)
+comment 00d2 music work ($00D2)
+comment 00d3 music work ($00D3)
+label 00d4 FAC3
+label 00d5 FAC3+1
+label 00d6 FAC3+2
+label 00d7 FAC3+3
+label 00d8 FAC3+4
+comment 00d9 FAC3+5 and FAC3+6 are reused as temporary workspace.
+label 00d9 FAC3+5
+comment 00DB basic work ($00DB,$00DC)
+comment 00DD basic work ($00DD,$00DE)
+comment 00DF basic work ($00DF)
+comment 00E0 basic work ($00E0,$00E1)
+#
+label 0100 text_vram
+label 03ff text_vram_end
+label 0400 basic_work
+label 0455 cmdBUF
+comment 0600 BASIC SAVE/LOAD Buffer ($0600-$06ff)
+label 0600 tapeBUF
+label 0700 basic_variable
+label 08ff basic_work_end
+label 0900 basic_text_start
+#
+# BASIC ROM
+#
+label b000 L2BASIC_hot_start
+label c000 L2BASIC_cold_start
+label d000 L1BASIC_start
+#
+# I/O area
+#
+comment e890 r/w charactor/background Color (MP-1710)
+label   e890 io_tile_color
+comment e891 r/w background color D2-0 (MP-1710)
+label   e891 io_background_color
+comment e892 r/w monocolor/color setting D0 (MP-1710)
+label   e892 io_color_setting
+comment ee00 read for stop tape
+label   ee00 io_stop_tape
+comment ee00 read for start tape
+label   ee20 io_start_tape
+comment ee40 write for display reverse 00:normal ff:reverse
+label   ee40 io_display_reverse
+comment ee80 D0:tape I/O
+comment ee80 D1-D5:ADC
+label   ee80 io_dac_and_tape
+comment eec0 when write to io_keyboard, do inhibit($00)/allow($F0) NMI mask.
+comment eec0 write D3-0 to drive E1-E13 line (keyboard line left to right)
+comment eec0 read shift key: F9:NMI F8:KANA(D7),F7:KANA symbol(D6),F6:Alpha symbol(D5),F5:alpha(D4)
+comment eec0 (shift key: 0:press, 1:release, ex. $EF=press alnum shift key )
+comment eec0 read D3-0 for key code
+label eec0 io_keyboard
+label ef00 io_timer
+label ef40 io_trace
+label ef80 io_clear_NMI
+comment efe0 screen mode D7-6,D3-2. MB-6885 only
+label efe0 io_screen_mode

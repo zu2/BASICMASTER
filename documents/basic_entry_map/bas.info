@@ -1,0 +1,329 @@
+word  0082#
+include workarea.info
+include mon.info
+#
+lcomment b016 CMPA #
+data b016
+label b082 out_CR
+comment b074 OPEN n,2 keyboard device
+label b087 CMTIN_until_CR
+data b155-b372
+char b155-b372
+label b155 mBASIC_MASTER_LEVEL2_V11
+data b178-b373
+char b178-b373
+comment b178 reserved word table
+comment b178 reserved word, (0x00 - intermediate code)
+comment b178 ex. Intermediate code of "RUN" is 0x01, "LIST#" is 0x02.
+label b178 reserved_word_table
+char b178-b37c
+comment b869 if AccA in 'A..Z Carry=0 else Carry=1
+label b869 isAtoZ
+comment b87a if AccA in '0..9 Carry=0 else Carry=1
+label b87a is0to9
+label ba78 bin2dec
+label bb28 mMemoryFull
+label bb34 mSyntax
+label bb3b mOverflow
+label bb46 mLineNumver
+data bb28-bb51
+char bb28-bb51
+comment bb52 display error message entries. AccB=ErrNo 
+label bb52 MemoryFullError
+dec bb53
+lcomment  bb54	TST: skip 2bytes
+data bb54
+label bb55 Error1
+lcomment  bb57	TST: skip 2bytes
+data bb57
+label bb58 Error2
+lcomment  bb5a	TST: skip 2bytes
+data bb5a
+label bb5b SyntaxError
+dec bb5c
+lcomment  bb5d	TST: skip 2bytes
+data bb5d
+label bb5e Error3
+lcomment  bb60	TST: skip 2bytes
+data bb60
+label bb61 Error4
+lcomment  bb63	TST: skip 2bytes
+data bb63
+label bb64 OverflowError
+dec bb65
+lcomment  bb66	TST: skip 2bytes
+data bb66
+label bb67 Error5
+lcomment  bb69	TST: skip 2bytes
+data bb69
+label bb6a Error6
+lcomment  bb6c	TST: skip 2bytes
+data bb6c
+label bb6d Error7
+lcomment  bb6f	TST: skip 2bytes
+data bb6f
+label bb70 Error8
+lcomment  bb72	TST: skip 2bytes
+data bb72
+label bb73 Error9
+lcomment  bb75	TST: skip 2bytes
+data bb75
+label bb76 Error10
+lcomment  bb78	TST: skip 2bytes
+data bb78
+label bb79 Error11
+lcomment  bb7b	TST: skip 2bytes
+data bb7b
+label bb7c Error12
+lcomment  bb7e	TST: skip 2bytes
+data bb7e
+label bb7f Error13
+lcomment  bb81	TST: skip 2bytes
+data bb81
+label bb82 Error14
+lcomment  bb84	TST: skip 2bytes
+data bb84
+label bb85 Error15
+lcomment  bb87	TST: skip 2bytes
+data bb87
+label bb88 Error16
+lcomment  bb8a	TST: skip 2bytes
+data bb8a
+label bb8b Error17
+lcomment  bb8d	TST: skip 2bytes
+data bb8d
+label bb8e Error18
+lcomment  bb90	TST: skip 2bytes
+data bb90
+label bb91 Error19
+lcomment  bb93	TST: skip 2bytes
+data bb93
+label bb94 Error20
+lcomment  bb96	TST: skip 2bytes
+data bb96
+label bb97 LineNumberError
+dec bb98
+lcomment  bb99	TST: skip 2bytes
+data bb99
+label bb9a Error21
+lcomment  bb9c	TST: skip 2bytes
+data bb9c
+label bb9d Error22
+lcomment  bb9f	TST: skip 2bytes
+data bb9f
+label bba0 Error23
+lcomment  bba2	TST: skip 2bytes
+data bba2
+label bba3 Error24
+lcomment  bba5	TST: skip 2bytes
+data bba5
+label bba6 Error25
+data bbe7-bc00
+char bbe7-bc00
+label bc01 outIX_dec
+label bc07 outAccAB_dec
+label bc23 get_1char
+label bc28 out_1char
+label bc2b BREAK
+label bc3b STOP
+label bc40 END
+label bc45 SIZE
+label bc6b calc_REMAIN
+label bc7c mPROGRAM
+label bc89 mVARIABLE
+label bc96 mREMAIN
+label bbe7 mHypenERROR
+label bbec mERROR
+label bbf4 mSTOP
+label bbfa mBREAK
+data bc7c-bca0
+char bc7c-bca0
+label bcae RESEQ
+label bd11 SEQ
+label bd45 RUN
+label bd6f NEW
+label bd7b BASIC_initialize
+label bda2 CONTINUE
+comment LIST to printer
+label bdb0 LIST_sharp
+label bdc8 LIST
+comment be64 OPEN n,1 CRT device
+label be64 CRTOUT_until_CR
+label c027 DEL
+label c0ef LOAD
+data  c0f0
+label c0f1 SAVE
+data  c0f3
+label c0f4 MERGE
+data  c0f6
+label c0f7 VERIFY
+label c113 SAVE2
+label c16b LOAD2
+label c16e MERGE2
+label c1d3 VERIFY2
+label c185 TAPEBRK
+label c221 MUSIC
+label c24a PRINT
+lcomment  c301	TST: skip 2bytes
+data c301
+lcomment  c304	TST: skip 2bytes
+data c304
+label c43c LET
+label c5ba SPCs
+label c5a0 CHRs
+label c5a7 STRs
+label c5c5 INKEYs
+label c5d4 CURSORs
+label c5db LEFTs
+label c615 RIGHTs
+label c62d MIDs
+label c69b IF
+label c6e5 FOR
+label c71A NEXT
+label c786 DEF
+label c7e0 DIM
+label c8b6 ON
+label c8f5 GOTO
+label c912 GOSUB
+label c930 RETURN
+comment c935 skip a line for REM,DATA
+label c935 skip_a_line
+label c941 RANDOMIZE
+label c970 INPUT
+label ca2d RESTORE
+label ca60 READ
+comment cb00 calculate (B3,B4) <= result
+label cb06 POKE
+label cb21 CALL
+label cbc1 relative_operator
+comment cbef is relative operator?
+label cc27 unary_minus
+label cc3a unary_plus
+label cc3e plus
+label cc49 minus
+label cc54 term
+comment cc57 is next code '* ?
+label cc57 multiply
+comment cc65 is next code '? ?
+label cc65 divide
+label cc73 expression
+lcomment  cc81	TST: skip 2bytes
+data cc81
+lcomment  cc84	TST: skip 2bytes
+data cc84
+lcomment  cc87	TST: skip 2bytes
+data cc87
+comment cc8a next intermediate code is AccB? Yes:Ins pointer++,Carry=1  No:Carry=0
+label cc8a check_next_ch
+label cc96 function 
+label ccc4 is_new_variable
+label cf7a function_jump_table
+label cd1f term
+label cd30 variable
+label cd65 open_parentheses
+label cd71 array
+label cda1 power
+label ce3a normalize_sub
+label ce7e RND
+label ceac PEEK
+label ceb4 PAI
+label cec0 TIME
+label cecf CURSOR
+label ced8 VAL
+label cee4 LEN
+label ceef ASC
+label cefb string_function
+label cf0a PLOT
+label cf6a PLOT_data
+data cf6a-cf79
+label cf7a relative_op_jump_table
+data  cf7a-cfad
+word  cf7a-cfad
+comment d067 (IX)<<1
+label d067 IX_shift_left
+comment d097 (IX)>>1
+label d097 IX_shift_right
+label d0d2 sign
+label d0d9 ABS
+comment d17d FAC=FAC-FAC2
+label d17d FACminusFAC2
+label d1d0 SIN
+label d2d5 COS
+label d318 TAN
+label d358 ATN
+label d43b INT
+label d472 SGN
+label d4c1 SQR
+label d525 LOG
+label d5b3 EXP
+label d5bd numeric_alignment
+label d5f2 multiply
+comment d714 FAC=FAC+FAC2 ?
+label d714 FACplus
+comment d73c FAC=FAC+TOS
+label d73c FACplusTOS
+comment d745 FAC=FAC-TOS
+label d745 FACminusTOS
+comment d74d FAC=FAC/TOS
+label d74d FACdivTOS
+comment d754 FAC=FAC*TOS
+label d754 FACmulTOS
+comment d75b FAC=FAC^TOS
+label d75b FACpowTOS
+label d762 isFAC_ZERO
+comment d784 normalize subroutine
+comment d784 exponent>>1,significand<<1
+comment d7da FAC=FAC+FAC2 ??
+comment f7fe FAC=FAC/FAC2 ??
+comment d802 exponent<<1,significand>>1
+comment d823 FAC=0
+label d823 ZEROtoFAC
+label d826 ZEROtoIX
+comment d834 Error
+label d851 mERROR
+label d859 TOStoFAC
+label d85f IXtoFAC
+label d875 TOStoFAC2
+label d87b IXtoFAC2
+label d8a1 FACtoIX
+label d8b9 FAC2toIX
+comment d8d2 IX(FAC)=IX(FAC)+IX(FAC) ??
+comment d8f1 power?
+label d984 PAI_table
+comment da14 AccA '0..F to 0..15
+label da14 HEX2BIN
+comment da27 skip sub
+label da3e decimal_to_binary
+label dbc1 FACtoDecimal
+comment dc1c % check
+comment dd97 number print out subr
+comment de31 IX(0) <=> IX(1)
+label de31 swap_IX0_IX1
+label de3a decimal_multiplier_table
+data de3a-de5d
+label de5e OPEN
+lcomment de78 physical number >= 7 ?
+comment de94 open user driver
+label df34 mSharp1
+data df34-df37
+char df34-df37
+label df38 mSharp2
+data df38-df47
+char df38-df3b
+word df3c-df46
+label df3a device_table
+label df3c device_table_0
+lcomment df3c physical number 1-6 device table
+label df48 CLOSE
+lcomment df4d physical number >= 7 ?
+data dfa3-dff3
+word dfa3-dff2
+comment df6a OPEN n,3 CMT save device
+label df6a CMTOUT_open
+comment df85 OPEN n,4 CMT load device
+label df85 CMTIN_open
+comment df74 OPEN n,5 CMT save device 2
+label df74 CMTOUT_open2
+comment df8f OPEN n,6 CMT load device 2
+label df8f CMTIN_open2
+comment dff4 jump table
