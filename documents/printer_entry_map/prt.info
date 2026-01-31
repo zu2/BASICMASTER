@@ -24,3 +24,10 @@ data e167-e168
 comment	e400	1200bps LOAD/SAVE/VERIFY ROM
 label	e400	C1200_INIT
 data e3e6-e3f8
+data e7b3-e7c7
+data e7c8-e7ce
+data e7cf-e7d9
+data e7da-e7e6
+data e7e7-e7ed
+data e7ee-e7f4
+data e7f5-e7ff
