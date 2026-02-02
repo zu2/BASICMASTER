@@ -675,11 +675,17 @@ IL32		CMPA	#'-'				; 先頭だけは '-' を受け付ける
 			CPX		#LINBUF
 			BNE		IL3
 			BRA		IL33
-IL323		CMPA	#'0'				; 入力できるのは数字だけ
+IL323		CMPA	#'$'
+			BEQ		IL329
+			CMPA	#'0'				; 入力できるのは10進か16進だけ
 			BCS		IL311
 			CMPA	#'9'+1
+			BCS		IL329
+			CMPA	#'A
+			BCS		IL311
+			CMPA	#'F+1
 			BCC		IL311
-			CPX		#LINBUF+LBUFSIZ
+IL329		CPX		#LINBUF+LBUFSIZ
 			BEQ		IL311
 IL33		JSR		ASCOUT
 			STAA	0,X
@@ -690,13 +696,47 @@ INPUT		BSR     INPLIN			; 1行読んでから
 DECBIN		LDX		#LINBUF-1		; バッファの文字列を数値に
 			LDAB	1,X
 			CMPB	#'-'
-			BNE		DB0
+			BNE		DB01
 			INX
 			BSR		DB0
 			NEGA
 			NEGB
 			SBCA	#0
 			RTS
+DB01		CMPB	#'$'
+			BNE		DB0
+			INX
+			CLRB
+			CLRA
+DB010		STAB	DBWK+1
+			STAA	DBWK
+			INX
+			LDAB	0,X
+			CMPB	#'0
+			BCS		DBE
+			CMPB	#'9+1
+			BCS		DB011
+			CMPB	#'A
+			BCS		DBE
+			CMPB	#'F+1
+			BCC		DBE
+			SUBB	#'A-10
+			BRA		DB012
+DB011		SUBB	#'0
+DB012		STAB	0,X
+			LDAB	DBWK+1
+			LDAA	DBWK
+			ASLB
+			ROLA
+			ASLB
+			ROLA
+			ASLB
+			ROLA
+			ASLB
+			ROLA
+			ADDB	0,X
+			ADCA	#0
+			BRA		DB010
 DB0			CLRB
 			CLRA
 DB1			INX
