@@ -146,7 +146,7 @@ hexまたはmot読み込み後、CALL $1800でエディタが起動します。
 
 - [https://youtu.be/ylioAQ-ejrg?si=YXtFhy-8xBeEI8f7](https://youtu.be/ylioAQ-ejrg?si=YXtFhy-8xBeEI8f7)
 
-### TEW版+RANPAKUエディタ版メモリマップ
+### TEW+RANPAKUエディタ版メモリマップ
 
 - 00E0-00F3	K-CPU work area
 - 0700-07FF K-Compiler Work (Variables)
