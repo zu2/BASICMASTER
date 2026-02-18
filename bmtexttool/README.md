@@ -40,11 +40,18 @@ j68ではファイルから読み込むときも変換可能なのでこのプ�
 
 GAME言語のプログラムをGAME68/BMの内部形式に変換する。
 
-キャラクタコードの変換機能はまだ無い。
+BASICMASTER独自キャラクタコードは、事前にtxt2bmで変換しておく。
 
 変換したプログラムをmotorola S/Intel Hexにすることで、各種エミュレータに持ち込める。
 
 下記の例では、GAME-MBに合わせて先頭アドレスを $1A00 としている
+
+```
+txt2bm source.game | game2bin  - > source.bin
+txt2mot source.bin 0x1A00 > source.mot
+```
+
+あるいは
 
 ```
 txt2bm source.game | game2bin  - > source.bin
@@ -62,7 +69,7 @@ txt2bm source.game | game2bin  - > source.bin
 
 BASICのプログラムをNAKAMOZU Tiny BASIC形式に変換する。
 
-キャラクタコードの変換機能はまだ無い。
+BASICMASTER独自キャラクタコードは、事前にtxt2bmで変換しておく。
 
 変換したプログラムをmotorola S/Intel Hexにすることで、各種エミュレータに持ち込める。
 
