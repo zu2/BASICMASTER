@@ -515,7 +515,7 @@ void expect(char *op) {
 	|| (int)strlen(op) != token->len
 	|| memcmp(token->str,op,token->len)){
 		printf("; ");print_token(token);printf("\n");
-		error_at(token->str,"expected '%c'", op);
+		error_at(token->str,"expected '%s'(%02x)", op,(*op)&0xff);
 	}
 	token = token->next;
 }
