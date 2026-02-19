@@ -1891,9 +1891,9 @@ FUNC	EQU	*-2
 	FDB	ABS
 	FCB	'!','P','('+Z
 	FDB	PICKB
-	FCB	'U','S','E','R'+2
+	FCB	'U','S','E','R'+Z
 	FDB	USER
-	FCB	'A','N','D'+2
+	FCB	'A','N','D'+Z
 	FDB	AND
 	FCB	'O','R'+Z
 	FDB	OR
