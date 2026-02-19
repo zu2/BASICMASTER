@@ -73,6 +73,6 @@ main(int argc, char **argv)
 			p++;
 		}
 	}
-	putchar(0xff);
+	putchar(0x80);					// NTBのプログラム末は$80
 	exit(0);
 }
