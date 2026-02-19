@@ -49,6 +49,7 @@ main(int argc, char **argv)
 	while(*p && *p=='\n'){		// 先頭の空行を読み飛ばす
 		p++;
 	}
+	int old_line_no = 0;
 	while(*p){
 		unsigned int	line_no = 0;
 		unsigned char	ch;
@@ -56,6 +57,10 @@ main(int argc, char **argv)
 			line_no = line_no*10+(ch-'0');
 			p++;
 		}
+		if (old_line_no>=line_no) {
+			fprintf(stderr,"line number error %d>=%d\n",old_line_no,line_no);
+		}
+		old_line_no = line_no;
 		putchar((line_no&0x0ff00)>>8);
 		putchar(line_no&0x0ff);
 		if((ch=*p) && (ch==' ')){		// 行番号直後のスペースを取る
