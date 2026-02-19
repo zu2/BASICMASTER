@@ -1,14 +1,15 @@
-all: NTB.srec NTB.hex
+all: NTB.mot NTB.hex
 
 %.bin: %.asm
 	a09 -oM00 -L -dDATETIME=`date +%s` -dPRGBEG=\$$2000 -dBASICROM=1 $< 
 	mv -f $*.b $@
 
-%.srec: %.bin
+%.mot: %.bin
 	objcopy --adjust-vma 0x2000 -I binary $< -O srec $@
 
 %.hex: %.bin
-	bin2hex $< $@ 0x2000 
+	objcopy --adjust-vma 0x2000 -I binary $< -O ihex $@
 
 NTB.bin: NTB.asm
-NTB.srec: NTB.bin
+NTB.mot: NTB.bin
+NTB.hex: NTB.bin
