@@ -361,7 +361,8 @@ INST0	JSR	SIZE		; メモリ容量チェック
 *
 DRCT1	BRA	DIRCT
 *
-INST1	LDS	EOP		; 計算した新しい最終ポインタ
+INST1	JSR	NMISEI
+	LDS	EOP		; 計算した新しい最終ポインタ
 				; IXは古いポインタ
 	INX
 INST2	DEX			; 挿入する分のスペースを開ける

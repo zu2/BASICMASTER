@@ -1,7 +1,7 @@
 all: NTB.mot NTB.hex
 
 %.bin: %.asm
-	a09 -oM00 -L -dDATETIME=`date +%s` -dPRGBEG=\$$2000 -dBASICROM=1 $< 
+	a09 -oM00 -L -dDATETIME=`date +%s` -dPRGBEG=\$$2000 -dBASICROM=0 $< 
 	mv -f $*.b $@
 
 %.mot: %.bin
