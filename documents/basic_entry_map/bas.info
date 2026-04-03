@@ -21,7 +21,15 @@ comment b869 if AccA in 'A..Z Carry=0 else Carry=1
 label b869 isAtoZ
 comment b87a if AccA in '0..9 Carry=0 else Carry=1
 label b87a is0to9
+comment b89a $7D:TST extend, skip 2bytes
+const b89a
+comment b98f LIST one line into buf ($008C,D)
+comment b99c LIST line number into buf
+comment ba6b out $00 for screen editing
 label ba78 bin2dec
+data ba8c-baa1
+data baa5-bab0
+comment bae0 reserved word to intermediate code
 label bb28 mMemoryFull
 label bb34 mSyntax
 label bb3b mOverflow
@@ -147,6 +155,7 @@ label bda2 CONTINUE
 comment LIST to printer
 label bdb0 LIST_sharp
 label bdc8 LIST
+comment be49 LIST: line number check
 comment be64 OPEN n,1 CRT device
 label be64 CRTOUT_until_CR
 label c027 DEL
@@ -289,6 +298,7 @@ label d8a1 FACtoIX
 label d8b9 FAC2toIX
 comment d8d2 IX(FAC)=IX(FAC)+IX(FAC) ??
 comment d8f1 power?
+const d96c-d9d6
 label d984 PAI_table
 comment da14 AccA '0..F to 0..15
 label da14 HEX2BIN
@@ -300,7 +310,7 @@ comment dd97 number print out subr
 comment de31 IX(0) <=> IX(1)
 label de31 swap_IX0_IX1
 label de3a decimal_multiplier_table
-data de3a-de5d
+const de3a-de5d
 label de5e OPEN
 lcomment de78 physical number >= 7 ?
 comment de94 open user driver
