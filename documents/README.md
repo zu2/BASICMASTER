@@ -128,6 +128,7 @@ Jrのグラフィック画面描画プログラム・独自波形の音の出し
 - I/O 1982年10月号 p.259- 「ベーシックマスターJr.を1,200ボーに!
 	- ROM書き換えサービス
 	- 基盤上のIC配置図があるので、回路図と見比べたい人は必携
+	- [Hitachi MB-6885 Basic Master Jr. - Old Crap Vintage Computing](https://oldcrap.org/2024/08/05/hitachi-mb-6885-basic-master-jr/) にTurboROMが載った個体の基板写真あり
 - 月刊マイコン1983年9月号 pp.484-489 「日立ベーシックマスタJr.用 I/O BOXの製作」
 	- サッポロシティスタンダード(6400ボー)、ROMカード
 
