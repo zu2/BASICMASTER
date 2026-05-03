@@ -606,7 +606,7 @@
 -	ROR A
 +	ROLA
 +	EORA	#1
-+	ROLA
++	RORA
  	BSR	DIV3
  	JSR	CMPX
  	BNE	RDIV
