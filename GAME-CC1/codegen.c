@@ -462,7 +462,7 @@ char *lv_search_tmp_array(loc_type_t kind,char *var1,char *var2,int offset)
 void	lv_add_reg_const(char *r, int val)
 {
 //	printf("; lv_add_reg_const %s=%d\n",r,val);
-	int	i =lv_search_ts(LOC_CONST,r);
+	int	i = lv_search_ts(LOC_CONST,r);
 
 	if(i==-1){
 //		printf("; lv_add_reg_const %s,%d not found\n",r,val);
@@ -1135,6 +1135,11 @@ void	LDAr_I(char *r,int v)
 		}else{
 			// どこにもないのでLDArする
 			printf("\tLDA%s\t#%d\n",r,v);				// 2 2
+		}
+		lv_free_reg(r);
+		if (strcmp(r,"A")==0
+		||  strcmp(r,"B")==0) {
+			lv_free_reg_D();
 		}
 		lv_add_reg_const(r,v);							// レジスタの値をアップデート
 		if(pexist){										// ペアの値がわかってるなら、Dも設定できる
@@ -4458,7 +4463,7 @@ epilogue()
 		}
 	}
 	for(int i=1; i<odl_n+1; i++){
-		if(ofl[i].opt==0){
+		if(odl[i].opt==0){
 			continue;
 		}
 		for(int j=0; j<odl[i].n; j++){

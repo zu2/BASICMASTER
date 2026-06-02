@@ -1043,7 +1043,7 @@ optimize_do_loop()
 				}
 				if(node_u->kind==ND_SETVAR
 				&& strcmp(node_u->str,odl[n].var)==0){	// 制御変数への代入がある
-					ofl[n].opt = 0;
+					odl[n].opt = 0;
 //					printf("; break control var '%s':",odl[n].var);
 					break;
 				}
