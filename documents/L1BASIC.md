@@ -75,6 +75,10 @@ $00DEからBASICソースコードを読み、中間言語に続く文字列と�
 # L1 BASIC Compiler
 
 - 「BASIC COMPILER/BM」I/O 1981年6月号 pp.105-112
+- 「deBUG」 I/O 1981年7月号 p.257
+- 「deBUG」 I/O 1981年10月号 p.272 （この号のダンプリストは使わない）
+- 「deBUG」 I/O 1981年11月号 p.283
+- 「deBUG」 I/O 1982年1月号 p.271
 
 # Link
 
