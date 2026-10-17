@@ -1,0 +1,38 @@
+**** LIFE
+*
+VRAM=$100
+BUFF=$6000
+LOOP.
+$=$C
+CUR=$F
+CUR(0)=$0A0A
+INKEY.
+ A=$
+ ;=A=$D #=EX ;
+#=INKEY
+
+EX.
+ I=0,$2FF
+  BUFF:I)=$20
+ \
+ P=32,$2DF
+  X=0
+   ;=VRAM:P-33)<>$20 X=X+1 ;
+   ;=VRAM:P-32)<>$20 X=X+1 ;
+   ;=VRAM:P-31)<>$20 X=X+1 ;
+   ;=VRAM:P-1)<>$20  X=X+1 ;
+   ;=VRAM:P)<>$20    X=X+1 ;
+   ;=VRAM:P+1)<>$20  X=X+1 ;
+   ;=VRAM:P+31)<>$20 X=X+1 ;
+   ;=VRAM:P+32)<>$20 X=X+1 ;
+   ;=VRAM:P+33)<>$20 X=X+1 ;
+   ;=X=3 BUFF:P)=$2A ;
+   ;=X=4 BUFF:P)=VRAM:P) ;
+   ;=X<>3&(X<>4)
+     BUFF:P)=$20 ;
+ \
+ I=0,$2FF
+  VRAM:I)=BUFF:I)
+ \
+#=EX
+*****

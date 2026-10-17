@@ -1,0 +1,58 @@
+*****
+* 8 QUEEN
+* $5000-OBJECT
+* $5F00-VARIABLE
+* $6000-ARRAY
+* $3400-SOUCE
+*****
+"8-QUEEN" /
+H=$6000
+AT=H+300
+SK=0
+NUM=0
+#=MAIN
+*
+GEN.
+ SK=SK+1 H(SK)=0
+  @
+   ;=AT(8+H(SK))+AT(23+N-H(SK))+AT(31+N+H(SK))=3
+    AT(N)=H(SK) AT(8+H(SK))=0
+    AT(23+N-H(SK))=0
+    AT(31+N+H(SK))=0
+    N=N+1
+     ;=N=8
+      /"***" NUM=NUM+1
+      ?=NUM "***" /
+      K=0,7
+       V=1,AT(K) "." \
+       "*"
+       V=AT(K),6 "." \
+       /
+      \
+     :
+     !=GEN
+     ;
+    N=N-1 AT(31+N+H(SK))=1
+    AT(23+N-H(SK))=1
+    AT(8+H(SK))=1
+   ;
+   H(SK)=H(SK)+1
+  @=H(SK)=8
+ SK=SK-1
+ ]
+*
+MAIN.
+"MAIN PROG."
+ N=0 K=0
+  @
+   AT(8+K)=1 K=K+1
+  @=K=8
+ K=0
+  @
+   AT(16+K)=1 AT(31+K)=1
+   K=K+1
+  @=K=15
+ !=GEN
+ " END OF 8-QUEEN"/
+HERE. #=HERE
+*****

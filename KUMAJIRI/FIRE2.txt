@@ -1,0 +1,147 @@
+**
+** STAR FIRE 2
+**
+**	BY TEW SOFT.
+**
+** ARRAY
+TYE=5 TX=$1000 TY=TX+TYE+1
+** SYSTEM
+CUR=$F KEY=$56 SP=$EE80
+**
+@
+!=INIT
+**
+TIME=100
+@
+ CUR(0)=0
+ "TIME:" ?(3)=TIME
+ I=0,TYE
+  !=TYEMOVE
+ \
+ !=SCOPE
+ !=COMMAND
+ CUR(0)=$1000
+ "SCORE:" ?(5)=SCORE
+TIME=TIME-1
+@=TIME=0
+CUR(0)=$0510
+"TRY AGAIN? (Y/N)"
+K=$
+@=K="N"
+>=$76A0
+**
+INIT.
+$=$C
+I=0,TYE
+ !=TYEBORN
+\
+SCORE=0
+VX=0 VY=0
+]
+**
+TYEBORN.
+ TX:I)='20+5
+ TY:I)='20+1
+]
+**
+TYEMOVE.
+ !=TYECLR
+ TX1='3-1+TX:I)+VX
+ TY1='3-1+TY:I)+VY
+ ;=TX1<1.(TX1>29)
+  TX1=TX:I)
+ ;
+ ;=TY1<1.(TY1>20)
+  TY1=TY:I)
+ ;
+ TX:I)=TX1 TY:I)=TY1
+ !=TYEDISP
+]
+**
+TYECLR.
+ CUR:0)=TX:I)-1
+ CUR:1)=TY:I)
+ "   "
+]
+**
+TYEDISP.
+ CUR:0)=TX:I)-1
+ CUR:1)=TY:I)
+ $=$8A $=$94 $=$88
+]
+**
+COMMAND.
+ >=$F00F IN=KEY:0)
+ VX=0 VY=0
+ ;=IN="I" VY=1 ;
+ ;=IN="M" VY=-1 ;
+ ;=IN="J" VX=1 ;
+ ;=IN="K" VX=-1 ;
+ ;=IN=" " !=FIRE ;
+]
+**
+FIRE.
+ J=0,10
+  CUR:1)=23-J
+  CUR:0)=J+5
+  $=$FC
+  CUR:0)=27-J
+  $=$FD
+ \
+ !=MU2
+ I=0,TYE
+  !=TYECHECK
+ \
+ J=0,10
+  CUR:1)=23-J
+  CUR:0)=J+5
+  " "
+  CUR:0)=27-J
+  " "
+ \
+ SCORE=SCORE-10
+]
+**
+TYECHECK.
+ TX1=TX:I)
+ TY1=TY:I)
+ ;=TY1=12&(TX1>14)&(TX1<18)
+  J=0,10
+   !=TYEDISP
+   !=MU
+   !=TYECLR
+   !=MU
+  \
+  SCORE=SCORE+100
+  TIME=TIME+10
+  !=TYEBORN
+ ;
+]
+**
+MU.
+ K=0,10
+  L=0,10 \
+   SP:0)=0
+  L=0,10 \
+   SP:0)=$FF
+ \
+]
+**
+MU2.
+ K=0,50
+  L=0,50-K/2 \
+   SP:0)=0
+  L=0,50-K/2 \
+   SP:0)=$FF
+ \
+]
+**
+SCOPE.
+ CUR(0)=$100A $=$86
+ CUR(0)=$100B $=$86
+ CUR(0)=$100D $=$86
+ CUR(0)=$100E $=$86
+ CUR(0)=$0E0C
+  $=$85 $=$85 $=9 $=$85 $=$85
+]
+**

@@ -1,0 +1,113 @@
+*
+* K-CODE
+*  DIS-ASSEMBLER
+*
+ 
+INKEY=$56
+TAB=$F
+
+$=$C
+"** K-CODE  DIS ASSEMBLER V2.0 **"//
+@
+ ">BEGINING ADR?" S=? /
+ ;=S:0)=$BD S=S+3 ;
+ @
+  >=$F00F
+  ;=INKEY:0)=" " !=ASM;
+ @=INKEY:0)=$7F
+@=0
+
+ASM.
+ "$" ??=S "  "
+ CODE=S:0) S=S+1
+ ;=CODE<57
+  !=ASM1
+ :
+  "???" ?$=CODE $=7
+ ;
+ /
+]
+
+ASM1.
+ ;=CODE=0  "GOTO"   ;
+ ;=CODE=1  "GOSUB"  ;
+ ;=CODE=2  "RET"    ];
+ ;=CODE=3  "IF"     ;
+ ;=CODE=4  "IFOR"   ];
+ ;=CODE=5  "FOR"
+  TAB:0)=16
+  ??=S(0)  "," ??=S(1)
+  ]
+ ;
+ ;=CODE=6  "STOP"   ];
+ ;=CODE=7  "LDC"    ;
+ ;=CODE=8  "PLDC"   ;
+ ;=CODE=9  "LDV"    ;
+ ;=CODE=10 "PLDV"   ;
+ ;=CODE=11 "LARY1"  ;
+ ;=CODE=12 "LARY2"  ;
+ ;=CODE=13 "STORE"  ;
+ ;=CODE=14 "SARY1"  ;
+ ;=CODE=15 "SARY2"  ;
+*
+ ;=CODE=16 "NOT"    ];
+ ;=CODE=17 "NEG"    ];
+ ;=CODE=18 "ABS"    ];
+ ;=CODE=19 "RND"    ];
+*
+ ;=CODE=20 "MUL"    ];
+ ;=CODE=21 "DIV"    ];
+ ;=CODE=22 "ADD"    ];
+ ;=CODE=23 "SUB"    ];
+*
+ ;=CODE=24 "GT"     ];
+ ;=CODE=25 "GE"     ];
+ ;=CODE=26 "LT"     ];
+ ;=CODE=27 "LE"     ];
+ ;=CODE=28 "EQ"     ];
+ ;=CODE=29 "NE"     ];
+*
+ ;=CODE=30 "AND"    ];
+ ;=CODE=31 "OR"     ];
+ ;=CODE=32 "EOR"    ];
+*
+ ;=CODE=33 "BGT"    ;
+ ;=CODE=34 "BGE"    ;
+ ;=CODE=35 "BLT"    ;
+ ;=CODE=36 "BLE"    ;
+ ;=CODE=37 "BEQ"    ;
+ ;=CODE=38 "BNE"    ;
+*
+ ;=CODE=39 "PRM"/
+  TAB:0)=6
+  $="""
+  &=S:0)<$80
+   $=S:0) S=S+1
+  &
+  $=S:0)-$80 S=S+1
+  $="""
+  ]
+ ;
+*
+ ;=CODE=40 "CRE"    ];
+ ;=CODE=41 "PRINT"  ];
+ ;=CODE=42 "PRINTR" ];
+ ;=CODE=43 "PR4HEX" ];
+ ;=CODE=44 "PR2HEX" ];
+ ;=CODE=45 "PRCHR"  ];
+ ;=CODE=46 "TAB"    ];
+*
+ ;=CODE=47 "PGET"   ];
+ ;=CODE=48 "GET"    ];
+ ;=CODE=49 "PINPUT" ];
+ ;=CODE=50 "INPUT"  ];
+*
+ ;=CODE=51 "SYS"    ];
+ ;=CODE=52 "BADDC"  ;
+ ;=CODE=53 "BADDV"  ;
+ ;=CODE=54 "BSUBC"  ;
+ ;=CODE=55 "BSUBV"  ;
+ ;=CODE=56 "RET68"  ];
+ TAB:0)=15 "$" ??=S(0) S=S+2
+]
+*
