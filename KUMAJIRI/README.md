@@ -146,6 +146,14 @@ hexまたはmot読み込み後、CALL $1800でエディタが起動します。
 
 - [https://youtu.be/ylioAQ-ejrg?si=YXtFhy-8xBeEI8f7](https://youtu.be/ylioAQ-ejrg?si=YXtFhy-8xBeEI8f7)
 
+### サンプルプログラム
+
+- [8QUEEN.txt](./8QUEEN.txt)
+- [DIS-AS.txt](./DIS-AS.txt) K-code disassembler
+- [FIRE2.txt](./FIRE2.txt)
+- [LIFE.txt](./LIFE.txt) LIFE GAME
+- [STARWARS.txt](./STARWARS.txt)
+
 ### TEW+RANPAKUエディタ版メモリマップ
 
 - 00E0-00F3	K-CPU work area
@@ -162,7 +170,6 @@ hexまたはmot読み込み後、CALL $1800でエディタが起動します。
 - (3246,47)	jump to Compile end (no error)
 - (32DC,DD)	jump to Compile end (error)
 - 3400-		Source code
-
 
 
 ## 掲載雑誌・書籍
