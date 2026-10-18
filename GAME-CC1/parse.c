@@ -651,7 +651,7 @@ Token *tokenize()
 			}
 			continue;
 		}
-		if(*p=='/' && (p[1]==' '||p[1]=='"' || p[1]=='/'||p[1]=='\n')){
+		if(*p=='/' && (p[1]==' '||p[1]=='"' || p[1]=='/'||p[1]=='\n'||p[1]=='\r'||p[1]=='\0')){
 //			printf(";tokenize TK_PRINTCR '/',p='%s'\n",get_least_line(p));
 			if((p[-1]=='"' || p[-1]=='/')){
 				cur = new_token(TK_SEP,cur,p,1);
