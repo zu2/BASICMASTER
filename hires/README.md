@@ -8,7 +8,7 @@ PRINT文は、独自のフックを持っているため、このルーチンで
 
 ## デモ
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/sV_8Xb4gq7k?si=Nsj4-E10YTjw7wS7" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[https://www.youtube.com/watch?v=sV_8Xb4gq7k](https://www.youtube.com/watch?v=sV_8Xb4gq7k)
 
 ## 初期化・文字列表示
 
