@@ -60,6 +60,12 @@ blog: [https://www.zukeran.org/shin/d/category/pc/basicmaster/](https://www.zuke
 - UNIX環境とBASIC MASTER内とのテキストデータの変換ツール
 - 詳細は [bmtexttool/README.md](bmtexttool/README.md) 参照
 
+## hires
+
+Jr.用のグラフィックルーチン。元はMB-6881改のために作られたもの
+
+- [hires](hires/README.md)
+
 ## fcc for BASICMASTER
 
 - Fuzix Compiler Kit でベーシックマスター用のプログラムを書くためのツール
